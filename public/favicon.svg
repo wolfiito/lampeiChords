@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#14b8a6" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+  <!-- Rounded App Icon Background -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  
+  <!-- Musical Pick / Headstock Shape -->
+  <g filter="url(#shadow)" fill="#ffffff" transform="translate(116, 100) scale(1.1)">
+    <!-- Eighth note with chord bar -->
+    <path d="M190 20 L230 20 L230 180 C215 170 190 170 170 180 C140 195 140 235 170 250 C200 265 240 245 240 210 L240 70 L90 100 L90 220 C75 210 50 210 30 220 C0 235 0 275 30 290 C60 305 100 285 100 250 L100 90 L200 70 Z" fill="#ffffff" opacity="0.95"/>
+    <!-- Guitar Fret Strings Accent -->
+    <line x1="20" y1="50" x2="60" y2="50" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+    <line x1="20" y1="70" x2="60" y2="70" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+    <line x1="20" y1="90" x2="60" y2="90" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  </g>
+</svg>
