@@ -26,6 +26,24 @@ export default async function handler(req, res) {
     const sql = getDb();
 
     if (req.method === 'GET' || req.method === 'HEAD') {
+      const { check, summary } = req.query || {};
+
+      // Fast check endpoint (<10ms query) to detect if songs were updated or deleted
+      if (check === '1' || summary === '1') {
+        const result = await sql`
+          SELECT 
+            COALESCE(MAX(EXTRACT(EPOCH FROM updated_at) * 1000), 0) AS max_updated_at,
+            COUNT(*)::int AS count
+          FROM chords_songs
+        `;
+        const row = result[0] || {};
+        return res.status(200).json({
+          success: true,
+          maxUpdatedAt: Number(row.max_updated_at || 0),
+          count: Number(row.count || 0)
+        });
+      }
+
       const rows = await sql`
         SELECT id, title, artist, original_key, current_key, capo, tempo, tags, content,
                EXTRACT(EPOCH FROM created_at) * 1000 AS created_at,

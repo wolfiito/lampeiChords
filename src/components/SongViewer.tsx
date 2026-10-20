@@ -18,7 +18,7 @@ import {
   BookOpen
 } from 'lucide-react'
 import type { Song, NotationSystem, ParsedLine } from '../types/song'
-import { parseChordPro, isSectionHeader } from '../music/chordPro'
+import { parseChordPro } from '../music/chordPro'
 import { calculateSongTiming, type SectionTiming } from '../music/songTiming'
 import {
   transposeChord,
@@ -65,7 +65,24 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   onOpenLibrary,
   activeSectionIndex = -1
 }) => {
-  const [semitoneShift, setSemitoneShift] = useState<number>(0)
+  // Individual local capo for this user/device (stored locally per song)
+  const [localCapo, setLocalCapo] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(`chords_user_capo_${song.id}`)
+      if (saved !== null) return Number(saved)
+    } catch {}
+    return song.capo || 0
+  })
+
+  // Individual local semitone shift for this user/device (stored locally per song)
+  const [semitoneShift, setSemitoneShift] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(`chords_user_shift_${song.id}`)
+      if (saved !== null) return Number(saved)
+    } catch {}
+    return 0
+  })
+
   const [notation, setNotation] = useState<NotationSystem>('anglo')
   const [fontSize, setFontSize] = useState<number>(18)
   const [numColumns, setNumColumns] = useState<1 | 2>(() => {
@@ -121,10 +138,29 @@ export const SongViewer: React.FC<SongViewerProps> = ({
 
   const isPrintModalOpen = isLocalPrintOpen || isPrintRequested
 
-  // Reset shift when song changes
+  // Sync individual preferences when song changes
   useEffect(() => {
-    setSemitoneShift(0)
-  }, [song.id])
+    try {
+      const savedCapo = localStorage.getItem(`chords_user_capo_${song.id}`)
+      setLocalCapo(savedCapo !== null ? Number(savedCapo) : (song.capo || 0))
+    } catch {
+      setLocalCapo(song.capo || 0)
+    }
+
+    try {
+      const savedShift = localStorage.getItem(`chords_user_shift_${song.id}`)
+      setSemitoneShift(savedShift !== null ? Number(savedShift) : 0)
+    } catch {
+      setSemitoneShift(0)
+    }
+  }, [song.id, song.capo])
+
+  const handleApplyCapo = (fret: number) => {
+    setLocalCapo(fret)
+    try {
+      localStorage.setItem(`chords_user_capo_${song.id}`, String(fret))
+    } catch {}
+  }
 
   // Parse ChordPro text
   const parsed = useMemo(() => {
@@ -161,25 +197,24 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     const baseKey = song.currentKey || song.originalKey || 'C'
     const diff = getDistanceBetweenKeys(baseKey, targetKey)
     setSemitoneShift(diff)
+    try {
+      localStorage.setItem(`chords_user_shift_${song.id}`, String(diff))
+    } catch {}
   }
 
   const handleShift = (delta: number) => {
     const next = semitoneShift + delta
     setSemitoneShift(next)
+    try {
+      localStorage.setItem(`chords_user_shift_${song.id}`, String(next))
+    } catch {}
   }
 
-  const handleSaveTransposed = () => {
-    if (semitoneShift === 0) return
-    const newContent = song.content.replace(/\[([^\]]+)\]/g, (match, chord) => {
-      if (isSectionHeader(chord)) return match
-      const transposed = transposeChord(chord, semitoneShift, accidental === 'flat', notation)
-      return `[${transposed}]`
-    })
-    onUpdateSong({
-      currentKey: effectiveKey,
-      content: newContent
-    })
+  const handleResetShift = () => {
     setSemitoneShift(0)
+    try {
+      localStorage.removeItem(`chords_user_shift_${song.id}`)
+    } catch {}
   }
 
   // Instant Native Vector PDF Download
@@ -187,7 +222,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     generateDirectSongPdf({
       parsed,
       effectiveKey,
-      capo: song.capo || 0,
+      capo: localCapo,
       tempo: song.tempo,
       semitoneShift,
       notation,
@@ -496,22 +531,19 @@ export const SongViewer: React.FC<SongViewerProps> = ({
 
               {semitoneShift !== 0 && (
                 <div className="flex items-center gap-1 pl-1">
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded">
+                  <span
+                    className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded"
+                    title="Transporte individual (solo en tu pantalla)"
+                  >
                     {semitoneShift > 0 ? `+${semitoneShift}` : semitoneShift}
                   </span>
                   <button
-                    onClick={() => setSemitoneShift(0)}
+                    onClick={handleResetShift}
                     title="Restablecer al tono original"
-                    className="p-1 text-zinc-400 hover:text-white bg-zinc-700/80 rounded transition"
+                    className="p-1 text-zinc-400 hover:text-white bg-zinc-700/80 rounded transition flex items-center gap-0.5 text-[10px]"
                   >
                     <RotateCcw className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={handleSaveTransposed}
-                    title="Fijar este tono permanentemente"
-                    className="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-1.5 py-0.5 rounded transition"
-                  >
-                    Fijar
+                    <span className="hidden sm:inline">Orig</span>
                   </button>
                 </div>
               )}
@@ -611,9 +643,9 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               <span className="text-xs font-bold px-2.5 py-1 bg-zinc-800/90 text-emerald-400 border border-zinc-700 rounded-xl">
                 {effectiveKey}
               </span>
-              {song.capo > 0 && (
+              {localCapo > 0 && (
                 <span className="text-xs font-bold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-xl">
-                  Capo {song.capo}
+                  Capo {localCapo}
                 </span>
               )}
             </div>
@@ -752,7 +784,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                       <span>🎸 Cejilla (Capo)</span>
                     </div>
                     <span className="text-[11px] text-zinc-400">
-                      {song.capo > 0 ? `Traste ${song.capo}` : 'Sin cejilla (0)'}
+                      {localCapo > 0 ? `Traste ${localCapo} (Individual)` : 'Sin cejilla (0)'}
                     </span>
                   </div>
                   <button
@@ -1056,9 +1088,9 @@ export const SongViewer: React.FC<SongViewerProps> = ({
         isOpen={isCapoModalOpen}
         onClose={() => setIsCapoModalOpen(false)}
         currentKey={effectiveKey}
-        currentCapo={song.capo || 0}
+        currentCapo={localCapo}
         notation={notation}
-        onApplyCapo={fret => onUpdateSong({ capo: fret })}
+        onApplyCapo={handleApplyCapo}
       />
 
       {/* PDF Export Modal */}

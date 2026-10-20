@@ -42,7 +42,9 @@ export function useSongs() {
   })
 
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
-  const initialSyncDone = useRef(false)
+  const lastCloudMaxUpdateRef = useRef<number>(0)
+  const lastCloudCountRef = useRef<number>(0)
+  const isFetchingRef = useRef<boolean>(false)
 
   // Persist songs to localStorage
   useEffect(() => {
@@ -60,83 +62,147 @@ export function useSongs() {
     }
   }, [activeSongId])
 
-  // Automatic Background Cloud Sync with Neon via /api/songs
-  useEffect(() => {
-    if (initialSyncDone.current) return
-    initialSyncDone.current = true
+  // Pull full song catalog from Neon cloud
+  const pullFullSongs = async () => {
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
 
-    let isMounted = true
+    try {
+      setSyncStatus('syncing')
+      const res = await fetch('/api/songs')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
 
-    async function syncWithCloud() {
-      try {
-        setSyncStatus('syncing')
-        const res = await fetch('/api/songs')
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data = await res.json()
+      if (data.success && Array.isArray(data.songs)) {
+        const cloudSongs: Song[] = data.songs.filter(
+          (s: Song) => !LEGACY_DEMO_IDS.has(s.id)
+        )
 
-        if (!isMounted) return
+        if (cloudSongs.length > 0) {
+          const maxTime = Math.max(...cloudSongs.map(s => s.updatedAt || 0))
+          lastCloudMaxUpdateRef.current = Math.max(lastCloudMaxUpdateRef.current, maxTime)
+          lastCloudCountRef.current = cloudSongs.length
 
-        if (data.success && Array.isArray(data.songs)) {
-          const cloudSongs: Song[] = data.songs.filter(
-            (s: Song) => !LEGACY_DEMO_IDS.has(s.id)
-          )
+          setSongs(prev => {
+            const cloudIds = new Set(cloudSongs.map(s => s.id))
+            const localOnly = prev.filter(s => !cloudIds.has(s.id) && !LEGACY_DEMO_IDS.has(s.id))
 
-          if (cloudSongs.length > 0) {
-            setSongs(prev => {
-              // Merge: cloud songs + any local-only songs
-              const cloudIds = new Set(cloudSongs.map(s => s.id))
-              const localOnly = prev.filter(s => !cloudIds.has(s.id) && !LEGACY_DEMO_IDS.has(s.id))
-
-              // If there are local-only songs, push them to cloud in background
-              if (localOnly.length > 0) {
-                fetch('/api/songs', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ songs: localOnly })
-                }).catch(() => {})
-              }
-
-              // Merge maps by most recent updatedAt
-              const map = new Map<string, Song>()
-              cloudSongs.forEach(s => map.set(s.id, s))
-              prev.forEach(s => {
-                if (LEGACY_DEMO_IDS.has(s.id)) return
-                const existing = map.get(s.id)
-                if (!existing || (s.updatedAt && s.updatedAt > (existing.updatedAt || 0))) {
-                  map.set(s.id, s)
-                }
-              })
-
-              const merged = Array.from(map.values())
-              return merged.length > 0 ? merged : cloudSongs
-            })
-          } else {
-            // Cloud is empty: push initial local songs to Neon
-            const cleanLocal = songs.filter(s => !LEGACY_DEMO_IDS.has(s.id))
-            if (cleanLocal.length > 0) {
-              await fetch('/api/songs', {
+            // Push any local-only songs in background
+            if (localOnly.length > 0) {
+              fetch('/api/songs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ songs: cleanLocal })
-              })
+                body: JSON.stringify({ songs: localOnly })
+              }).catch(() => {})
             }
-          }
-          setSyncStatus('synced')
+
+            const map = new Map<string, Song>()
+            cloudSongs.forEach(s => map.set(s.id, s))
+            prev.forEach(s => {
+              if (LEGACY_DEMO_IDS.has(s.id)) return
+              const existing = map.get(s.id)
+              if (!existing || (s.updatedAt && s.updatedAt > (existing.updatedAt || 0))) {
+                map.set(s.id, s)
+              }
+            })
+
+            const merged = Array.from(map.values())
+            return merged.length > 0 ? merged : cloudSongs
+          })
         }
-      } catch (err) {
-        console.warn('Transparent cloud sync deferred (offline or dev mode):', err)
-        if (isMounted) setSyncStatus('offline')
+        setSyncStatus('synced')
+      }
+    } catch (err) {
+      console.warn('Cloud sync error or offline mode:', err)
+      setSyncStatus('offline')
+    } finally {
+      isFetchingRef.current = false
+    }
+  }
+
+  // Lightweight check (<10ms) to detect if songs were edited or deleted by other devices
+  const checkCloudUpdates = async () => {
+    if (typeof document !== 'undefined' && document.hidden) return
+    if (isFetchingRef.current) return
+
+    try {
+      const res = await fetch('/api/songs?check=1')
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.success) {
+        const cloudMax = Number(data.maxUpdatedAt || 0)
+        const cloudCount = Number(data.count || 0)
+
+        if (
+          cloudMax > lastCloudMaxUpdateRef.current ||
+          cloudCount !== lastCloudCountRef.current
+        ) {
+          await pullFullSongs()
+        }
+      }
+    } catch {
+      // Quiet fail if network hiccups
+    }
+  }
+
+  // Real-Time Background Synchronization
+  useEffect(() => {
+    let isMounted = true
+
+    // 1. Initial full fetch
+    pullFullSongs()
+
+    // 2. BroadcastChannel for instant 0ms sync across tabs on same device
+    let channel: BroadcastChannel | null = null
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        channel = new BroadcastChannel('chords_lampei_realtime_sync')
+        channel.onmessage = e => {
+          if (e.data?.type === 'SONG_UPDATED' || e.data?.type === 'SYNC_REQUEST') {
+            pullFullSongs()
+          }
+        }
+      }
+    } catch {}
+
+    // 3. Fast Polling interval (every 4 seconds) so all band devices update "al momento"
+    const intervalId = setInterval(() => {
+      if (isMounted) {
+        checkCloudUpdates()
+      }
+    }, 4000)
+
+    // 4. Instant sync on visibility, window focus or back online
+    const handleImmediateSync = () => {
+      if (isMounted && typeof document !== 'undefined' && !document.hidden) {
+        checkCloudUpdates()
       }
     }
-
-    syncWithCloud()
+    document.addEventListener('visibilitychange', handleImmediateSync)
+    window.addEventListener('focus', handleImmediateSync)
+    window.addEventListener('online', handleImmediateSync)
 
     return () => {
       isMounted = false
+      clearInterval(intervalId)
+      channel?.close()
+      document.removeEventListener('visibilitychange', handleImmediateSync)
+      window.removeEventListener('focus', handleImmediateSync)
+      window.removeEventListener('online', handleImmediateSync)
     }
   }, [])
 
   const activeSong = songs.find(s => s.id === activeSongId) || songs[0] || null
+
+  const notifyBroadcast = () => {
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('chords_lampei_realtime_sync')
+        bc.postMessage({ type: 'SONG_UPDATED' })
+        bc.close()
+      }
+    } catch {}
+  }
 
   const syncSongToCloud = (targetSong: Song) => {
     setSyncStatus('syncing')
@@ -146,7 +212,14 @@ export function useSongs() {
       body: JSON.stringify({ song: targetSong })
     })
       .then(r => {
-        if (r.ok) setSyncStatus('synced')
+        if (r.ok) {
+          setSyncStatus('synced')
+          lastCloudMaxUpdateRef.current = Math.max(
+            lastCloudMaxUpdateRef.current,
+            targetSong.updatedAt || Date.now()
+          )
+          notifyBroadcast()
+        }
       })
       .catch(() => {
         setSyncStatus('offline')
@@ -208,7 +281,9 @@ export function useSongs() {
     })
 
     // Delete in cloud
-    fetch(`/api/songs?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {})
+    fetch(`/api/songs?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      .then(() => notifyBroadcast())
+      .catch(() => {})
   }
 
   const duplicateSong = (id: string) => {
