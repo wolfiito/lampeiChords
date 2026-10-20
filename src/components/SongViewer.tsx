@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import type { Song, NotationSystem } from '../types/song'
 import { parseChordPro, isSectionHeader } from '../music/chordPro'
+import { calculateSongTiming } from '../music/songTiming'
 import {
   transposeChord,
   CHROMATIC_SHARPS_ANGLO,
@@ -89,6 +90,11 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   const parsed = useMemo(() => {
     return parseChordPro(song.content)
   }, [song.content])
+
+  // Musical timing and repeat linkages
+  const timingData = useMemo(() => {
+    return calculateSongTiming(song.content, song.tempo, song.timeSignature)
+  }, [song.content, song.tempo, song.timeSignature])
 
   // User preference: sharps (#) vs flats (b)
   const [accidental, setAccidental] = useState<'sharp' | 'flat'>(() => {
@@ -430,6 +436,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
 
         {/* Screen Lyrics & Chords Body */}
         <div
+          id="song-content-container"
           className={`transition-all duration-150 leading-relaxed ${
             numColumns === 2 ? 'md:columns-2 gap-8 sm:gap-10' : 'columns-1'
           }`}
@@ -444,7 +451,55 @@ export const SongViewer: React.FC<SongViewerProps> = ({
 
               if (line.type === 'comment') {
                 const sIdx = sectionCount++
-                const isActive = activeSectionIndex === sIdx
+                const secTiming = timingData.sections[sIdx]
+                const currentActiveSec = activeSectionIndex >= 0 ? timingData.sections[activeSectionIndex] : null
+                const isCurrentSec = activeSectionIndex === sIdx
+                const isTargetOfActive = currentActiveSec?.targetSectionIndex === sIdx
+                const isActive = isCurrentSec || isTargetOfActive
+
+                // If this is a repeat section (e.g. empty [Coro] placed to repeat an earlier chorus)
+                if (secTiming?.isRepeat) {
+                  return (
+                    <div
+                      key={idx}
+                      id={`song-section-${sIdx}`}
+                      data-section-index={sIdx}
+                      onClick={() => {
+                        const targetIdx = secTiming.targetSectionIndex ?? sIdx
+                        const elem = document.getElementById(`song-section-${targetIdx}`)
+                        if (elem) elem.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      }}
+                      className={`break-inside-avoid mt-4 mb-2 font-bold tracking-wide text-xs sm:text-sm pl-2.5 select-none transition-all duration-300 rounded-xl cursor-pointer ${
+                        isActive
+                          ? 'border-l-4 border-emerald-400 bg-emerald-500/15 py-2 pr-3 text-emerald-300 ring-1 ring-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.25)]'
+                          : 'border-l-4 border-emerald-500/50 bg-zinc-900/70 hover:bg-zinc-800/80 py-1.5 pr-2.5 text-zinc-300'
+                      }`}
+                      title={`Repite ${secTiming.parentTitle} (clic para ver acordes)`}
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-emerald-400 font-extrabold text-xs">⤴</span>
+                          <span className="uppercase font-black text-white">{line.comment}</span>
+                          <span className="text-[10px] text-emerald-300 font-semibold bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                            Repite {secTiming.parentTitle}
+                          </span>
+                          {isCurrentSec && (
+                            <span className="text-[10px] text-amber-300 font-bold animate-pulse flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                              En pantalla arriba ↑
+                            </span>
+                          )}
+                        </div>
+                        {secTiming?.durationSec ? (
+                          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full border bg-zinc-800/90 text-zinc-300 border-zinc-700">
+                            ⏱ {secTiming.durationSec}s
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  )
+                }
+
                 return (
                   <div
                     key={idx}
@@ -461,7 +516,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                         {isActive && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />}
                         <span>{line.comment}</span>
                       </span>
-                      {line.sectionDuration ? (
+                      {secTiming?.durationSec ? (
                         <span
                           className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full border transition flex items-center gap-1 ${
                             isActive
@@ -469,7 +524,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                               : 'bg-zinc-800/80 text-zinc-400 border-zinc-700/80'
                           }`}
                         >
-                          ⏱ {line.sectionDuration}s
+                          ⏱ {secTiming.durationSec}s
                         </span>
                       ) : null}
                     </div>

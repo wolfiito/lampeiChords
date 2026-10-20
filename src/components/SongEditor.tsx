@@ -224,12 +224,18 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
         </div>
       </div>
 
-      {/* Manual Section Timing Tip Banner */}
-      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3 mb-4 text-xs text-zinc-300 flex items-start gap-2.5">
+      {/* Manual Section Timing & Repeat Guidance Banner */}
+      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3 sm:p-3.5 mb-4 text-xs text-zinc-300 flex items-start gap-2.5">
         <span className="text-base shrink-0 select-none">⏱</span>
-        <div>
-          <span className="font-bold text-emerald-400 block mb-0.5">Control de tiempo manual en el auto-scroll:</span>
-          Puedes indicar cuántos segundos dura cada parte escribiendo por ejemplo <code className="bg-zinc-800 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">[Intro]{'{30}'}</code> o <code className="bg-zinc-800 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">[Verso 1]{'{25}'}</code>. El auto-scroll brincará suavemente de una sección a otra en el tiempo exacto que le indiques.
+        <div className="space-y-1">
+          <div>
+            <span className="font-bold text-emerald-400">Control de tiempo manual y saltos:</span>
+            {' '}Puedes indicar los segundos escribiendo <code className="bg-zinc-800 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">[Intro]{'{30}'}</code> o <code className="bg-zinc-800 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">[Verso 1]{'{25}'}</code>.
+          </div>
+          <div>
+            <span className="font-bold text-amber-300">Ahorro de espacio y repeticiones:</span>
+            {' '}Cuando una parte se repita (ej. el Coro), solo escribe <code className="bg-zinc-800 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold">[Coro]</code> sin volver a escribir la letra. El auto-scroll regresará automáticamente al Coro para que lo toques y luego brincará al verso siguiente.
+          </div>
         </div>
       </div>
 

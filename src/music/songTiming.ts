@@ -10,6 +10,9 @@ export interface SectionTiming {
   linesCount: number
   chordsCount: number
   isExplicitDuration?: boolean
+  isRepeat?: boolean
+  targetSectionIndex?: number
+  parentTitle?: string
 }
 
 export interface SongTimingData {
@@ -27,9 +30,18 @@ export function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(rem).padStart(2, '0')}`
 }
 
+export function normalizeSectionName(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\b(repite|repetir|volver\s*a|repetition|repeat|x\d+|\d+x)\b/gi, '')
+    .replace(/[()[\]{}:/\\-]/g, '')
+    .trim()
+}
+
 /**
  * Analyzes a ChordPro song and computes musical duration estimates or uses
  * manual user times [Intro]{30}, [Verso 1]{25} for section-by-section timing.
+ * Automatically links repeating sections (e.g. empty [Coro]) back to the original.
  */
 export function calculateSongTiming(
   content: string,
@@ -91,12 +103,48 @@ export function calculateSongTiming(
   }
 
   let runningSeconds = 0
-  const sections: SectionTiming[] = rawSections.map((sec, idx) => {
+  const sections: SectionTiming[] = []
+
+  for (let idx = 0; idx < rawSections.length; idx++) {
+    const sec = rawSections[idx]
     const hasExplicit = sec.explicitDurationSec !== undefined && sec.explicitDurationSec > 0
+    const isEmptySection = sec.lines.length === 0 && sec.chords === 0
+
+    // Check if this is an empty repeat of an earlier section with content
+    let parentSection: SectionTiming | undefined = undefined
+    if (isEmptySection) {
+      const normTitle = normalizeSectionName(sec.title)
+      for (let p = idx - 1; p >= 0; p--) {
+        const prev = sections[p]
+        if (prev.linesCount > 0 || prev.chordsCount > 0) {
+          const prevNorm = normalizeSectionName(prev.title)
+          if (prevNorm === normTitle || prevNorm.startsWith(normTitle) || normTitle.startsWith(prevNorm)) {
+            parentSection = prev
+            break
+          }
+        }
+      }
+    }
+
     let durationSec = 0
     let bars = 8
+    let isRepeat = false
+    let targetSectionIndex = idx
+    let parentTitle: string | undefined = undefined
 
-    if (hasExplicit) {
+    if (parentSection) {
+      isRepeat = true
+      targetSectionIndex = parentSection.targetSectionIndex ?? parentSection.index
+      parentTitle = parentSection.title
+
+      if (hasExplicit) {
+        durationSec = sec.explicitDurationSec!
+        bars = Math.max(1, Math.round(durationSec / secondsPerBar))
+      } else {
+        durationSec = parentSection.durationSec
+        bars = parentSection.bars
+      }
+    } else if (hasExplicit) {
       durationSec = sec.explicitDurationSec!
       bars = Math.max(1, Math.round(durationSec / secondsPerBar))
     } else {
@@ -123,7 +171,7 @@ export function calculateSongTiming(
     runningSeconds += durationSec
     const endSec = Math.round(runningSeconds * 10) / 10
 
-    return {
+    sections.push({
       index: idx,
       title: sec.title,
       bars,
@@ -132,9 +180,12 @@ export function calculateSongTiming(
       endSec,
       linesCount: sec.lines.length,
       chordsCount: sec.chords,
-      isExplicitDuration: hasExplicit
-    }
-  })
+      isExplicitDuration: hasExplicit || parentSection?.isExplicitDuration,
+      isRepeat,
+      targetSectionIndex,
+      parentTitle
+    })
+  }
 
   const hasCustomTiming = sections.some(s => s.isExplicitDuration)
 

@@ -27,6 +27,9 @@ export interface ParsedLine {
   directiveValue?: string
   comment?: string
   sectionDuration?: number // Optional duration in seconds e.g. [Intro]{30}
+  isRepeat?: boolean
+  targetSectionIndex?: number
+  parentTitle?: string
 }
 
 export interface ParsedSong {
