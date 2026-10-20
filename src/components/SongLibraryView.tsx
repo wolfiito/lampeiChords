@@ -5,7 +5,6 @@ import {
   Trash2,
   Copy,
   Music,
-  Upload,
   Download,
   Play,
   Edit3,
@@ -20,7 +19,7 @@ interface SongLibraryViewProps {
   onEditSong: (id: string) => void
   onDuplicateSong: (id: string) => void
   onDeleteSong: (id: string) => void
-  onOpenImportModal: () => void
+  onOpenImportModal?: () => void
   onExportLibrary: () => void
 }
 
@@ -31,7 +30,6 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
   onEditSong,
   onDuplicateSong,
   onDeleteSong,
-  onOpenImportModal,
   onExportLibrary
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -72,22 +70,12 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
               <span className="font-black text-lg sm:text-xl tracking-tight text-white block leading-tight">
                 chords<span className="text-emerald-400">Lampei</span>
               </span>
-              <span className="text-[11px] text-zinc-400 font-medium">Repertorio Digital & Cifrados</span>
+              <span className="text-[11px] text-zinc-400 font-medium hidden sm:inline">Repertorio Digital & Cifrados</span>
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 sm:gap-3">
-
-            <button
-              onClick={onOpenImportModal}
-              className="px-3 sm:px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs sm:text-sm font-bold rounded-xl border border-zinc-700 transition flex items-center gap-1.5"
-              title="Importar canciones en texto o archivo"
-            >
-              <Upload className="w-4 h-4 text-emerald-400" />
-              <span className="hidden sm:inline">Importar</span>
-            </button>
-
             <button
               onClick={onNewSong}
               className="px-3.5 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center gap-1.5"
@@ -106,14 +94,11 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <span>Mi Repertorio</span>
+              <span>Canciones</span>
               <span className="text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                 {songs.length} {songs.length === 1 ? 'canción' : 'canciones'}
               </span>
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-              Selecciona una canción para tocarla, transportarla a cualquier tono o descargarla en PDF.
-            </p>
           </div>
         </div>
 
@@ -207,13 +192,6 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                 >
                   <Plus className="w-4 h-4" />
                   <span>Nueva Canción</span>
-                </button>
-                <button
-                  onClick={onOpenImportModal}
-                  className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-bold border border-zinc-700 transition flex items-center gap-2"
-                >
-                  <Upload className="w-4 h-4 text-emerald-400" />
-                  <span>Importar</span>
                 </button>
               </div>
             )}

@@ -8,8 +8,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  FileDown,
-  ArrowLeft
+  FileDown
 } from 'lucide-react'
 import type { Song, NotationSystem } from '../types/song'
 import { parseChordPro, isSectionHeader } from '../music/chordPro'
@@ -46,7 +45,6 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   onEdit,
   isPrintRequested = false,
   onClosePrint,
-  onBackToLibrary,
   activeSectionIndex = -1
 }) => {
   const [semitoneShift, setSemitoneShift] = useState<number>(0)
@@ -179,17 +177,6 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           {/* Row 1: Tonalidad y Transposición */}
           <div className="flex items-center justify-between gap-2 overflow-x-auto scrollbar-none pb-0.5">
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {onBackToLibrary && (
-                <button
-                  onClick={onBackToLibrary}
-                  title="Volver al Repertorio"
-                  className="px-2 py-1 text-xs font-bold text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-xl border border-zinc-700 flex items-center gap-1 transition shrink-0"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="hidden sm:inline">Repertorio</span>
-                </button>
-              )}
-
               <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-emerald-400">
                 Tono:
               </span>

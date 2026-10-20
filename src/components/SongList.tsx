@@ -6,7 +6,6 @@ import {
   Copy,
   Music,
   X,
-  Upload,
   Download
 } from 'lucide-react'
 import type { Song } from '../types/song'
@@ -20,7 +19,7 @@ interface SongListProps {
   onNewSong: () => void
   onDuplicateSong: (id: string) => void
   onDeleteSong: (id: string) => void
-  onOpenImportModal: () => void
+  onOpenImportModal?: () => void
   onExportLibrary: () => void
 }
 
@@ -33,7 +32,6 @@ export const SongList: React.FC<SongListProps> = ({
   onNewSong,
   onDuplicateSong,
   onDeleteSong,
-  onOpenImportModal,
   onExportLibrary
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -68,7 +66,7 @@ export const SongList: React.FC<SongListProps> = ({
               <Music className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-black text-lg text-white">Mi Repertorio</h2>
+              <h2 className="font-black text-lg text-white">Canciones</h2>
               <p className="text-xs text-emerald-400 font-medium">{songs.length} canciones guardadas</p>
             </div>
           </div>
@@ -80,30 +78,18 @@ export const SongList: React.FC<SongListProps> = ({
           </button>
         </div>
 
-        {/* Action Buttons: New Song & Import */}
-        <div className="p-3 sm:p-4 space-y-2 border-b border-zinc-800/80">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => {
-                onNewSong()
-                onClose()
-              }}
-              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nueva</span>
-            </button>
-            <button
-              onClick={() => {
-                onOpenImportModal()
-                onClose()
-              }}
-              className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs rounded-xl border border-zinc-700 transition flex items-center justify-center gap-1.5"
-            >
-              <Upload className="w-4 h-4 text-emerald-400" />
-              <span>Importar</span>
-            </button>
-          </div>
+        {/* Action Button: New Song */}
+        <div className="p-3 sm:p-4 border-b border-zinc-800/80">
+          <button
+            onClick={() => {
+              onNewSong()
+              onClose()
+            }}
+            className="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nueva Canción</span>
+          </button>
         </div>
 
         {/* Search Input */}
