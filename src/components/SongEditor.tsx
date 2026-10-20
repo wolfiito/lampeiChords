@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { Save, ArrowLeft, Wand2, Eye, EyeOff, PlusCircle } from 'lucide-react'
+import { Save, ArrowLeft, Wand2, Eye, EyeOff } from 'lucide-react'
 import type { Song } from '../types/song'
 import { convertTraditionalToChordPro } from '../music/chordConverter'
 import { parseChordPro } from '../music/chordPro'
@@ -35,23 +35,6 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
     })
   }
 
-  const insertTextAtCursor = (textToInsert: string) => {
-    const textarea = textareaRef.current
-    if (!textarea) return
-
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const current = textarea.value
-
-    const newContent = current.substring(0, start) + textToInsert + current.substring(end)
-    setContent(newContent)
-
-    setTimeout(() => {
-      textarea.focus()
-      textarea.setSelectionRange(start + textToInsert.length, start + textToInsert.length)
-    }, 10)
-  }
-
   const handleConvertTraditional = () => {
     const converted = convertTraditionalToChordPro(content, {
       title,
@@ -60,18 +43,6 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
     })
     setContent(converted)
   }
-
-  const quickChords = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Bb', 'Eb', 'Ab', 'F#', 'Am', 'Em', 'Dm', 'G7', 'C7', 'D7']
-  const quickSections = [
-    '[Intro]',
-    '[Intro]{30}',
-    '[Verso 1]',
-    '[Verso 1]{25}',
-    '[Coro]',
-    '[Coro]{40}',
-    '[Puente]',
-    '[Outro]'
-  ]
 
   const liveParsed = parseChordPro(content)
 
@@ -89,7 +60,6 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
           </button>
           <div>
             <h2 className="text-lg sm:text-xl font-bold text-white">Editor de Canción</h2>
-            <p className="text-xs text-emerald-400">Formato ChordPro</p>
           </div>
         </div>
 
@@ -104,12 +74,11 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
 
           <button
             onClick={handleConvertTraditional}
-            title="Convierte canciones pegadas con acordes arriba y letra abajo a ChordPro"
+            title="Convierte canciones pegadas con acordes arriba y letra abajo a formato estándar"
             className="px-2.5 sm:px-3.5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
           >
             <Wand2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden md:inline">Auto-formato ChordPro</span>
-            <span className="md:hidden">Auto-formato</span>
+            <span>Auto-formato</span>
           </button>
 
           <button
@@ -191,60 +160,12 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
         </div>
       </div>
 
-      {/* Quick Chord Insertion Bar (Scrollable on touch) */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-2.5 sm:p-3 mb-4">
-        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <span className="text-xs text-zinc-400 font-bold uppercase whitespace-nowrap flex items-center gap-1">
-            <PlusCircle className="w-3.5 h-3.5 text-emerald-400" /> Insertar:
-          </span>
-
-          {quickChords.map(c => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => insertTextAtCursor(`[${c}]`)}
-              className="px-2 sm:px-2.5 py-1 bg-zinc-800 hover:bg-emerald-500/20 hover:text-emerald-300 text-zinc-200 font-bold text-xs rounded-lg border border-zinc-700 transition shrink-0"
-            >
-              {c}
-            </button>
-          ))}
-
-          <div className="w-px h-5 bg-zinc-800 shrink-0 mx-1" />
-
-          {quickSections.map(sec => (
-            <button
-              key={sec}
-              type="button"
-              onClick={() => insertTextAtCursor(`\n${sec}\n`)}
-              className="px-2 py-1 bg-zinc-800 hover:bg-emerald-500/20 hover:text-emerald-300 text-zinc-400 font-semibold text-xs rounded-lg border border-zinc-700 transition shrink-0"
-            >
-              {sec}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Manual Section Timing & Repeat Guidance Banner */}
-      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3 sm:p-3.5 mb-4 text-xs text-zinc-300 flex items-start gap-2.5">
-        <span className="text-base shrink-0 select-none">⏱</span>
-        <div className="space-y-1">
-          <div>
-            <span className="font-bold text-emerald-400">Control de tiempo manual y saltos:</span>
-            {' '}Puedes indicar los segundos escribiendo <code className="bg-zinc-800 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">[Intro]{'{30}'}</code> o <code className="bg-zinc-800 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">[Verso 1]{'{25}'}</code>.
-          </div>
-          <div>
-            <span className="font-bold text-amber-300">Ahorro de espacio y repeticiones:</span>
-            {' '}Cuando una parte se repita (ej. el Coro), solo escribe <code className="bg-zinc-800 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold">[Coro]</code> sin volver a escribir la letra. El auto-scroll regresará automáticamente al Coro para que lo toques y luego brincará al verso siguiente.
-          </div>
-        </div>
-      </div>
-
       {/* Main Editor & Live Preview */}
       <div className={`grid gap-4 sm:gap-6 ${showPreview ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
         {/* Editor Area */}
         <div className="flex flex-col">
           <label className="text-xs font-bold uppercase text-zinc-400 tracking-wider mb-1.5">
-            Letra y Acordes (ChordPro):
+            Letra y Acordes:
           </label>
           <textarea
             ref={textareaRef}
