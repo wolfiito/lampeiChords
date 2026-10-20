@@ -9,14 +9,82 @@ const SECTION_KEYWORDS = new Set([
 ])
 
 export function isSectionHeader(text: string): boolean {
-  const norm = text.trim().toUpperCase()
-  if (SECTION_KEYWORDS.has(norm)) return true
+  // Strip trailing duration markers like {30}, {30s}, 30s, : 30s
+  const clean = text
+    .replace(/\{[^}]*\}$/, '')
+    .replace(/(?:[:\s-]|\s*\{)\s*\d+\s*(?:s|seg)?\}?$/i, '')
+    .trim()
+    .toUpperCase()
+  if (SECTION_KEYWORDS.has(clean)) return true
   const prefixes = [
     'VERSO', 'VERSE', 'PARTE', 'PART', 'CORO', 'CHORUS',
     'ESTRIBILLO', 'PUENTE', 'BRIDGE', 'INTRO', 'INTERLUDIO',
     'INTERLUDE', 'SOLO', 'OUTRO', 'FINAL', 'PRE-CORO', 'PRE-CHORUS', 'TAB', 'RIFF'
   ]
-  return prefixes.some(p => norm.startsWith(p))
+  return prefixes.some(p => clean.startsWith(p))
+}
+
+/**
+ * Parses a section header line and extracts title and optional explicit duration in seconds.
+ * Supports:
+ *   [Intro]{30}
+ *   [Verso 1]{25}
+ *   [Intro] {30s}
+ *   [Intro: 30s]
+ *   [Intro - 30s]
+ *   {comment: Intro}{30}
+ */
+export function parseSectionLine(rawLine: string): { title: string; explicitSec?: number } | null {
+  const trimmed = rawLine.trim()
+  if (!trimmed) return null
+
+  // Pattern 1: [Intro]{30} or [Verso 1]{25} or [Intro] {30} or [Intro]{30s} or [Intro]
+  const bracketMatch = trimmed.match(/^\[([^\]]+)\](?:\s*\{(\d+)(?:s|seg)?\})?$/i)
+  if (bracketMatch) {
+    let title = bracketMatch[1].trim()
+    let sec = bracketMatch[2] ? parseInt(bracketMatch[2], 10) : undefined
+
+    // Also support [Intro 30s] or [Intro: 30s] or [Intro - 30s]
+    if (sec === undefined) {
+      const innerMatch = title.match(/(?:[:\s-]|\s*\{)\s*(\d+)\s*(?:s|seg)?\}?$/i)
+      if (innerMatch && innerMatch.index !== undefined) {
+        const candidateTitle = title.substring(0, innerMatch.index).trim()
+        if (isSectionHeader(candidateTitle)) {
+          title = candidateTitle
+          sec = parseInt(innerMatch[1], 10)
+        }
+      }
+    }
+
+    if (isSectionHeader(title)) {
+      return {
+        title: title.replace(/[:/]/g, '').trim(),
+        explicitSec: sec
+      }
+    }
+  }
+
+  // Pattern 2: {comment: Intro}{30} or {c: Intro 30s}
+  const commentMatch = trimmed.match(/^\{c(?:omment)?:\s*([^}]+)\}(?:\s*\{(\d+)(?:s|seg)?\})?$/i)
+  if (commentMatch) {
+    let title = commentMatch[1].trim()
+    let sec = commentMatch[2] ? parseInt(commentMatch[2], 10) : undefined
+
+    if (sec === undefined) {
+      const innerMatch = title.match(/(?:[:\s-]|\s*\{)\s*(\d+)\s*(?:s|seg)?\}?$/i)
+      if (innerMatch && innerMatch.index !== undefined) {
+        sec = parseInt(innerMatch[1], 10)
+        title = title.substring(0, innerMatch.index).trim()
+      }
+    }
+
+    return {
+      title: title.replace(/[:/]/g, '').trim(),
+      explicitSec: sec
+    }
+  }
+
+  return null
 }
 
 /**
@@ -47,9 +115,11 @@ export function parseChordPro(chordProContent: string): ParsedSong {
       else if (dKey === 'capo') capo = parseInt(dVal, 10) || 0
       else if (dKey === 'tempo' || dKey === 'bpm') tempo = parseInt(dVal, 10) || undefined
       else if (dKey === 'comment' || dKey === 'c') {
+        const secInfo = parseSectionLine(`{comment: ${dVal}}`)
         parsedLines.push({
           type: 'comment',
-          comment: dVal
+          comment: secInfo ? secInfo.title : dVal,
+          sectionDuration: secInfo?.explicitSec
         })
         continue
       }
@@ -68,12 +138,13 @@ export function parseChordPro(chordProContent: string): ParsedSong {
       continue
     }
 
-    // 3. Section header alone in square brackets, e.g. [Coro], [Intro], [Verso 1]
-    const singleBracketMatch = trimmed.match(/^\[([^\]]+)\]$/)
-    if (singleBracketMatch && isSectionHeader(singleBracketMatch[1])) {
+    // 3. Section header alone in square brackets, e.g. [Coro], [Intro], [Verso 1], [Intro]{30}
+    const secParsed = parseSectionLine(trimmed)
+    if (secParsed) {
       parsedLines.push({
         type: 'comment',
-        comment: singleBracketMatch[1]
+        comment: secParsed.title,
+        sectionDuration: secParsed.explicitSec
       })
       continue
     }

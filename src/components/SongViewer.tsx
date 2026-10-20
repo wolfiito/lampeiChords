@@ -12,7 +12,7 @@ import {
   ArrowLeft
 } from 'lucide-react'
 import type { Song, NotationSystem } from '../types/song'
-import { parseChordPro } from '../music/chordPro'
+import { parseChordPro, isSectionHeader } from '../music/chordPro'
 import {
   transposeChord,
   CHROMATIC_SHARPS_ANGLO,
@@ -124,7 +124,8 @@ export const SongViewer: React.FC<SongViewerProps> = ({
 
   const handleSaveTransposed = () => {
     if (semitoneShift === 0) return
-    const newContent = song.content.replace(/\[([^\]]+)\]/g, (_match, chord) => {
+    const newContent = song.content.replace(/\[([^\]]+)\]/g, (match, chord) => {
+      if (isSectionHeader(chord)) return match
       const transposed = transposeChord(chord, semitoneShift, accidental === 'flat', notation)
       return `[${transposed}]`
     })
@@ -455,10 +456,23 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                         : 'border-l-4 border-emerald-400 text-emerald-400'
                     }`}
                   >
-                    <span className="flex items-center gap-2">
-                      {isActive && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />}
-                      <span>{line.comment}</span>
-                    </span>
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="flex items-center gap-2">
+                        {isActive && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />}
+                        <span>{line.comment}</span>
+                      </span>
+                      {line.sectionDuration ? (
+                        <span
+                          className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full border transition flex items-center gap-1 ${
+                            isActive
+                              ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400/60 shadow-sm'
+                              : 'bg-zinc-800/80 text-zinc-400 border-zinc-700/80'
+                          }`}
+                        >
+                          ⏱ {line.sectionDuration}s
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 )
               }

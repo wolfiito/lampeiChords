@@ -62,7 +62,16 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
   }
 
   const quickChords = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Bb', 'Eb', 'Ab', 'F#', 'Am', 'Em', 'Dm', 'G7', 'C7', 'D7']
-  const quickSections = ['[Intro]', '[Verso 1]', '[Verso 2]', '[Coro]', '[Puente]', '[Solo]', '[Outro]']
+  const quickSections = [
+    '[Intro]',
+    '[Intro]{30}',
+    '[Verso 1]',
+    '[Verso 1]{25}',
+    '[Coro]',
+    '[Coro]{40}',
+    '[Puente]',
+    '[Outro]'
+  ]
 
   const liveParsed = parseChordPro(content)
 
@@ -215,6 +224,15 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
         </div>
       </div>
 
+      {/* Manual Section Timing Tip Banner */}
+      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3 mb-4 text-xs text-zinc-300 flex items-start gap-2.5">
+        <span className="text-base shrink-0 select-none">⏱</span>
+        <div>
+          <span className="font-bold text-emerald-400 block mb-0.5">Control de tiempo manual en el auto-scroll:</span>
+          Puedes indicar cuántos segundos dura cada parte escribiendo por ejemplo <code className="bg-zinc-800 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">[Intro]{'{30}'}</code> o <code className="bg-zinc-800 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">[Verso 1]{'{25}'}</code>. El auto-scroll brincará suavemente de una sección a otra en el tiempo exacto que le indiques.
+        </div>
+      </div>
+
       {/* Main Editor & Live Preview */}
       <div className={`grid gap-4 sm:gap-6 ${showPreview ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
         {/* Editor Area */}
@@ -228,7 +246,7 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
             value={content}
             onChange={e => setContent(e.target.value)}
             className="w-full bg-zinc-950 font-mono text-xs sm:text-sm text-zinc-200 border border-zinc-800 rounded-2xl p-3 sm:p-4 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 leading-relaxed resize-y"
-            placeholder="[Intro]&#10;[G]  [D]  [C]  [G]&#10;&#10;[Verso 1]&#10;Por encima del so[G]l..."
+            placeholder="[Intro]{30}&#10;[G]  [D]  [C]  [G]&#10;&#10;[Verso 1]{25}&#10;Por encima del so[G]l..."
           />
         </div>
 
@@ -243,8 +261,13 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
                 if (line.type === 'empty') return <div key={idx} className="h-3 sm:h-4" />
                 if (line.type === 'comment') {
                   return (
-                    <div key={idx} className="font-bold text-xs uppercase text-emerald-400 my-1.5">
-                      {line.comment}
+                    <div key={idx} className="font-bold text-xs uppercase text-emerald-400 my-1.5 flex items-center justify-between">
+                      <span>{line.comment}</span>
+                      {line.sectionDuration && (
+                        <span className="text-[10px] bg-zinc-800 text-zinc-300 font-mono font-bold px-2 py-0.5 rounded-full border border-zinc-700">
+                          ⏱ {line.sectionDuration}s
+                        </span>
+                      )}
                     </div>
                   )
                 }

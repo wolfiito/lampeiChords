@@ -93,14 +93,38 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   }
 
   // Set scroll Y
-  const setScrollY = (y: number) => {
+  const setScrollY = (y: number, smooth: boolean = false) => {
     const el = scrollContainerRef?.current
     if (el && el.scrollHeight > el.clientHeight) {
-      el.scrollTop = y
+      if (smooth) {
+        el.scrollTo({ top: y, behavior: 'smooth' })
+      } else {
+        el.scrollTop = y
+      }
     } else {
-      window.scrollTo(0, y)
+      if (smooth) {
+        window.scrollTo({ top: y, behavior: 'smooth' })
+      } else {
+        window.scrollTo(0, y)
+      }
     }
   }
+
+  // Section transition style: 'jump' (salto directo a la sección) vs 'continuous' (flujo continuo)
+  const [transitionMode, setTransitionMode] = useState<'jump' | 'continuous'>('jump')
+
+  // Auto-switch to sections mode and jump transition if custom manual times [Intro]{30} exist
+  useEffect(() => {
+    if (timingData.hasCustomTiming) {
+      setMode('sections')
+      setTransitionMode('jump')
+    }
+  }, [timingData.hasCustomTiming, song?.id])
+
+  const currentSecRef = useRef<number>(activeSectionIndex)
+  useEffect(() => {
+    currentSecRef.current = activeSectionIndex
+  }, [activeSectionIndex])
 
   // Sync accumulated scroll when user touches/scrolls manually
   useEffect(() => {
@@ -137,9 +161,10 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   // Reset scroll and timer to start
   const handleResetToTop = () => {
     setIsPlaying(false)
-    setScrollY(0)
+    setScrollY(0, true)
     accumulatedScrollRef.current = 0
     elapsedRef.current = 0
+    currentSecRef.current = -1
     setElapsedSeconds(0)
     onActiveSectionChange?.(-1)
   }
@@ -150,13 +175,14 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     if (!sec) return
 
     elapsedRef.current = sec.startSec
+    currentSecRef.current = secIndex
     setElapsedSeconds(sec.startSec)
     onActiveSectionChange?.(secIndex)
 
     const secElem = document.getElementById(`song-section-${secIndex}`)
     if (secElem) {
-      const topOffset = Math.max(0, secElem.offsetTop - 120)
-      setScrollY(topOffset)
+      const topOffset = Math.max(0, secElem.offsetTop - 100)
+      setScrollY(topOffset, true)
       accumulatedScrollRef.current = topOffset
     }
   }
@@ -188,7 +214,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
         const move = deltaMs * pxPerMs
 
         accumulatedScrollRef.current += move
-        setScrollY(accumulatedScrollRef.current)
+        setScrollY(accumulatedScrollRef.current, false)
 
         if (accumulatedScrollRef.current >= maxScroll - 4) {
           setIsPlaying(false)
@@ -203,14 +229,14 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
         const targetY = progress * maxScroll
 
         accumulatedScrollRef.current = targetY
-        setScrollY(targetY)
+        setScrollY(targetY, false)
 
         if (elapsedRef.current >= targetDuration || targetY >= maxScroll - 4) {
           setIsPlaying(false)
           return
         }
       } else if (mode === 'sections') {
-        // Musical section-by-section smart scroll with active glow
+        // Musical section-by-section smart scroll with active glow & jump/continuous transitions
         elapsedRef.current += deltaSec
         setElapsedSeconds(elapsedRef.current)
 
@@ -219,16 +245,30 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
             s => elapsedRef.current >= s.startSec && elapsedRef.current < s.endSec
           ) || timingData.sections[timingData.sections.length - 1]
 
-        if (currentSec && currentSec.index !== activeSectionIndex) {
+        if (currentSec && currentSec.index !== currentSecRef.current) {
+          currentSecRef.current = currentSec.index
           onActiveSectionChange?.(currentSec.index)
 
-          // Smoothly scroll to the active section with breathing room
+          // Smoothly glide / jump directly to the active section
           const secElem = document.getElementById(`song-section-${currentSec.index}`)
           if (secElem) {
-            const targetY = Math.max(0, secElem.offsetTop - 120)
-            // Interpolate toward section position
+            const targetY = Math.max(0, secElem.offsetTop - 100)
             accumulatedScrollRef.current = targetY
-            setScrollY(targetY)
+            setScrollY(targetY, true)
+          }
+        } else if (transitionMode === 'continuous' && currentSec) {
+          // Continuous smooth flow between sections
+          const secDuration = Math.max(0.1, currentSec.endSec - currentSec.startSec)
+          const secProgress = Math.min(1, Math.max(0, (elapsedRef.current - currentSec.startSec) / secDuration))
+          const secElem = document.getElementById(`song-section-${currentSec.index}`)
+          const nextSecElem = document.getElementById(`song-section-${currentSec.index + 1}`)
+
+          if (secElem) {
+            const curTop = Math.max(0, secElem.offsetTop - 100)
+            const nextTop = nextSecElem ? Math.max(0, nextSecElem.offsetTop - 100) : maxScroll
+            const targetY = curTop + secProgress * (nextTop - curTop)
+            accumulatedScrollRef.current = targetY
+            setScrollY(targetY, false)
           }
         }
 
@@ -248,7 +288,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
         cancelAnimationFrame(animationFrameRef.current)
       }
     }
-  }, [isPlaying, mode, speed, targetDuration, timingData, activeSectionIndex, onActiveSectionChange])
+  }, [isPlaying, mode, speed, targetDuration, timingData, transitionMode, onActiveSectionChange])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -290,7 +330,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [mode, isPlaying])
 
-  // Active section display
+  // Active section display & countdown
   const currentActiveSection = useMemo(() => {
     if (activeSectionIndex >= 0 && timingData.sections[activeSectionIndex]) {
       return timingData.sections[activeSectionIndex]
@@ -301,6 +341,14 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
       ) || timingData.sections[0]
     )
   }, [activeSectionIndex, timingData.sections, elapsedSeconds])
+
+  const secTimeRemaining = currentActiveSection
+    ? Math.max(0, currentActiveSection.endSec - elapsedSeconds)
+    : 0
+
+  const secProgressPct = currentActiveSection && currentActiveSection.durationSec > 0
+    ? Math.min(100, Math.max(0, ((elapsedSeconds - currentActiveSection.startSec) / currentActiveSection.durationSec) * 100))
+    : 0
 
   return (
     <aside
@@ -473,6 +521,52 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
           {/* Mode 3: Musical Sections Controls */}
           {mode === 'sections' && (
             <div className="space-y-2.5 pt-1">
+              {/* Manual Times Banner if custom durations detected */}
+              {timingData.hasCustomTiming && (
+                <div className="bg-emerald-500/15 border border-emerald-500/40 rounded-xl px-2.5 py-1.5 text-[11px] text-emerald-300 font-bold flex items-center justify-between shadow-xs">
+                  <span className="flex items-center gap-1.5">
+                    <span>⚡</span>
+                    <span>Tiempos manuales ({timingData.sections.filter(s => s.isExplicitDuration).length} partes con tiempo)</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-emerald-400 font-black">
+                    Total: {formatTime(timingData.totalSeconds)}
+                  </span>
+                </div>
+              )}
+
+              {/* Transition Style Selector */}
+              <div className="flex items-center justify-between text-xs pb-1 border-b border-zinc-800/80">
+                <span className="text-zinc-400 font-medium">Modo de avance:</span>
+                <div className="flex items-center bg-zinc-800/90 p-0.5 rounded-xl border border-zinc-700/80 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setTransitionMode('jump')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${
+                      transitionMode === 'jump'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                    title="Brinca directamente a cada sección al cumplirse su tiempo"
+                  >
+                    <span>⚡</span>
+                    <span>Brinco</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTransitionMode('continuous')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${
+                      transitionMode === 'continuous'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                    title="Desplazamiento suave y continuo dentro de cada parte"
+                  >
+                    <span>🌊</span>
+                    <span>Continuo</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Tempo Adjuster */}
               <div className="flex items-center justify-between text-xs pb-1 border-b border-zinc-800/80">
                 <span className="text-zinc-400 font-medium">Tempo musical:</span>
@@ -497,19 +591,40 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
                 </div>
               </div>
 
-              {/* Active Section Info */}
-              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-2.5 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-emerald-400 uppercase font-black block">
-                    Sección en curso:
-                  </span>
-                  <span className="text-sm font-bold text-white">
-                    {currentActiveSection?.title || 'Inicio'}
+              {/* Active Section Info Card */}
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-2.5">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-emerald-400 uppercase font-black">
+                      Sección en curso:
+                    </span>
+                    {currentActiveSection?.isExplicitDuration && (
+                      <span className="text-[9px] bg-emerald-500/30 text-emerald-300 font-mono font-bold px-1.5 py-0.2 rounded-full border border-emerald-400/40">
+                        ⚡ {currentActiveSection.durationSec}s manual
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs font-mono font-bold text-emerald-300">
+                    {formatTime(elapsedSeconds)} / {formatTime(timingData.totalSeconds)}
                   </span>
                 </div>
-                <span className="text-xs font-mono font-bold text-emerald-300">
-                  {formatTime(elapsedSeconds)} / {formatTime(timingData.totalSeconds)}
-                </span>
+
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm font-black text-white">
+                    {currentActiveSection?.title || 'Inicio'}
+                  </span>
+                  <span className="text-[11px] font-mono text-zinc-300">
+                    Quedan <strong className="text-emerald-400 font-bold">{Math.ceil(secTimeRemaining)}s</strong> (de {Math.round(currentActiveSection?.durationSec || 0)}s)
+                  </span>
+                </div>
+
+                {/* Section Progress Bar */}
+                <div className="w-full bg-zinc-800/80 rounded-full h-1.5 overflow-hidden mt-1.5 border border-zinc-700/60">
+                  <div
+                    className="bg-emerald-400 h-full transition-all duration-150"
+                    style={{ width: `${secProgressPct}%` }}
+                  />
+                </div>
               </div>
 
               {/* Clickable Section Quick-Jump Pills */}
@@ -525,14 +640,16 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
                         key={sec.index}
                         type="button"
                         onClick={() => handleJumpToSection(sec.index)}
-                        className={`px-2 py-1 rounded-lg text-[11px] font-bold transition border cursor-pointer ${
+                        className={`px-2 py-1 rounded-lg text-[11px] font-bold transition border cursor-pointer flex items-center gap-1 ${
                           isActive
                             ? 'bg-emerald-500 text-zinc-950 border-emerald-400 shadow-sm'
                             : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:text-white hover:bg-zinc-700'
                         }`}
                         title={`Saltar a ${sec.title} (${formatTime(sec.startSec)})`}
                       >
-                        {sec.title}
+                        {sec.isExplicitDuration && <span className="text-[9px]">⚡</span>}
+                        <span>{sec.title}</span>
+                        <span className="text-[10px] opacity-75 font-mono">({Math.round(sec.durationSec)}s)</span>
                       </button>
                     )
                   })}

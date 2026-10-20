@@ -1,3 +1,5 @@
+import { parseSectionLine } from './chordPro'
+
 export interface SectionTiming {
   index: number
   title: string
@@ -7,12 +9,14 @@ export interface SectionTiming {
   endSec: number
   linesCount: number
   chordsCount: number
+  isExplicitDuration?: boolean
 }
 
 export interface SongTimingData {
   bpm: number
   timeSignature: string
   totalSeconds: number
+  hasCustomTiming: boolean
   sections: SectionTiming[]
 }
 
@@ -24,8 +28,8 @@ export function formatTime(seconds: number): string {
 }
 
 /**
- * Analyzes a ChordPro song and computes accurate musical duration estimates
- * for each section based on BPM, time signature, lines, and chord progressions.
+ * Analyzes a ChordPro song and computes musical duration estimates or uses
+ * manual user times [Intro]{30}, [Verso 1]{25} for section-by-section timing.
  */
 export function calculateSongTiming(
   content: string,
@@ -38,28 +42,46 @@ export function calculateSongTiming(
   const secondsPerBar = beatsPerBar * secondsPerBeat
 
   const lines = (content || '').split(/\r?\n/)
-  const rawSections: Array<{ title: string; lines: string[]; chords: number }> = []
-  let currentSection = { title: 'Inicio', lines: [] as string[], chords: 0 }
+  const rawSections: Array<{
+    title: string
+    lines: string[]
+    chords: number
+    explicitDurationSec?: number
+  }> = []
+
+  let currentSection = {
+    title: 'Inicio',
+    lines: [] as string[],
+    chords: 0,
+    explicitDurationSec: undefined as number | undefined
+  }
 
   for (const line of lines) {
     const trimmed = line.trim()
-    const commentMatch = trimmed.match(/^\[([^\]]+)\]$/) || trimmed.match(/^\{c(?:omment)?:\s*([^}]+)\}$/i)
-    if (commentMatch) {
-      if (currentSection.lines.length > 0 || currentSection.chords > 0) {
+    if (!trimmed) continue
+
+    const parsedSec = parseSectionLine(trimmed)
+    if (parsedSec) {
+      if (currentSection.title !== 'Inicio' || currentSection.lines.length > 0 || currentSection.chords > 0) {
         rawSections.push(currentSection)
       }
-      currentSection = { title: commentMatch[1].replace(/[:/]/g, '').trim(), lines: [], chords: 0 }
+      currentSection = {
+        title: parsedSec.title,
+        lines: [],
+        chords: 0,
+        explicitDurationSec: parsedSec.explicitSec
+      }
       continue
     }
 
-    if (trimmed && !trimmed.startsWith('{')) {
+    if (!trimmed.startsWith('{')) {
       const chords = (trimmed.match(/\[([^\]]+)\]/g) || []).length
       currentSection.chords += chords
       currentSection.lines.push(trimmed)
     }
   }
 
-  if (currentSection.lines.length > 0 || currentSection.chords > 0) {
+  if (currentSection.title !== 'Inicio' || currentSection.lines.length > 0 || currentSection.chords > 0) {
     rawSections.push(currentSection)
   }
 
@@ -70,27 +92,36 @@ export function calculateSongTiming(
 
   let runningSeconds = 0
   const sections: SectionTiming[] = rawSections.map((sec, idx) => {
-    const titleLower = sec.title.toLowerCase()
-    const isIntroOrOutro = /intro|outro|final/i.test(titleLower)
-    const isChorus = /coro|chorus|estribillo/i.test(titleLower)
-    const isBridge = /puente|bridge|solo|interludio/i.test(titleLower)
-
+    const hasExplicit = sec.explicitDurationSec !== undefined && sec.explicitDurationSec > 0
+    let durationSec = 0
     let bars = 8
-    if (isIntroOrOutro) {
-      bars = Math.max(4, Math.min(8, sec.chords || 4))
-    } else if (isBridge) {
-      bars = Math.max(8, Math.min(16, (sec.chords || 4) * 2))
-    } else if (sec.lines.length <= 2) {
-      bars = 4
-    } else if (sec.lines.length <= 4) {
-      bars = isChorus ? 8 : (sec.chords >= 6 ? 16 : 8)
+
+    if (hasExplicit) {
+      durationSec = sec.explicitDurationSec!
+      bars = Math.max(1, Math.round(durationSec / secondsPerBar))
     } else {
-      bars = 16
+      const titleLower = sec.title.toLowerCase()
+      const isIntroOrOutro = /intro|outro|final/i.test(titleLower)
+      const isChorus = /coro|chorus|estribillo/i.test(titleLower)
+      const isBridge = /puente|bridge|solo|interludio/i.test(titleLower)
+
+      if (isIntroOrOutro) {
+        bars = Math.max(4, Math.min(8, sec.chords || 4))
+      } else if (isBridge) {
+        bars = Math.max(8, Math.min(16, (sec.chords || 4) * 2))
+      } else if (sec.lines.length <= 2) {
+        bars = 4
+      } else if (sec.lines.length <= 4) {
+        bars = isChorus ? 8 : (sec.chords >= 6 ? 16 : 8)
+      } else {
+        bars = 16
+      }
+      durationSec = Math.round(bars * secondsPerBar * 10) / 10
     }
 
-    const durationSec = Math.round(bars * secondsPerBar * 10) / 10
     const startSec = Math.round(runningSeconds * 10) / 10
     runningSeconds += durationSec
+    const endSec = Math.round(runningSeconds * 10) / 10
 
     return {
       index: idx,
@@ -98,16 +129,20 @@ export function calculateSongTiming(
       bars,
       durationSec,
       startSec,
-      endSec: Math.round(runningSeconds * 10) / 10,
+      endSec,
       linesCount: sec.lines.length,
-      chordsCount: sec.chords
+      chordsCount: sec.chords,
+      isExplicitDuration: hasExplicit
     }
   })
+
+  const hasCustomTiming = sections.some(s => s.isExplicitDuration)
 
   return {
     bpm,
     timeSignature,
-    totalSeconds: Math.max(30, Math.round(runningSeconds)),
+    totalSeconds: Math.max(10, Math.round(runningSeconds)),
+    hasCustomTiming,
     sections
   }
 }
