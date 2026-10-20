@@ -167,25 +167,34 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     startSec: number
   } | null>(null)
 
+  // Get true absolute scroll position of an element regardless of parent positioning/columns
+  const getElementPageY = (el: HTMLElement): number => {
+    const container = scrollContainerRef?.current
+    if (container && container.scrollHeight > container.clientHeight) {
+      const containerRect = container.getBoundingClientRect()
+      const elemRect = el.getBoundingClientRect()
+      return elemRect.top - containerRect.top + container.scrollTop
+    }
+    const elemRect = el.getBoundingClientRect()
+    const currentWindowScroll = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0
+    return elemRect.top + currentWindowScroll
+  }
+
   // Measure section height vs viewport visible height to decide if small 1x scroll is needed
   const calculateSectionScrollBounds = (targetDomIndex: number, currentStartSec: number) => {
     const secElem = document.getElementById(`song-section-${targetDomIndex}`)
     if (!secElem) return null
 
-    const secTop = secElem.offsetTop
-    const nextSecElem = document.getElementById(`song-section-${targetDomIndex + 1}`)
-    let secBottom = secTop + 250
-    if (nextSecElem) {
-      secBottom = nextSecElem.offsetTop
-    } else {
-      const songContainer = document.getElementById('song-content-container') || document.body
-      secBottom = Math.max(secTop + 200, songContainer.offsetTop + songContainer.offsetHeight)
-    }
+    const container = scrollContainerRef?.current
+    const secTop = getElementPageY(secElem)
+    // The section block container (secElem.parentElement) wraps the header and all its lyric lines
+    const blockContainer = secElem.parentElement
+    const secHeight = blockContainer ? blockContainer.offsetHeight : Math.max(80, secElem.offsetHeight)
+    const secBottom = secTop + secHeight
 
-    const secHeight = Math.max(80, secBottom - secTop)
-    const viewportHeight = scrollContainerRef?.current?.clientHeight || window.innerHeight || 800
-    const topPadding = 80
-    const bottomPadding = 130
+    const viewportHeight = container?.clientHeight || window.innerHeight || 800
+    const topPadding = 70 // Leave space for sticky header (56px) + margin
+    const bottomPadding = 120
     const availableHeight = Math.max(150, viewportHeight - topPadding - bottomPadding)
     const startScrollY = Math.max(0, secTop - topPadding)
     const maxNeededScrollY = Math.max(startScrollY, secBottom - viewportHeight + bottomPadding)
@@ -325,8 +334,8 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
           const nextSecElem = document.getElementById(`song-section-${targetDomIndex + 1}`)
 
           if (secElem) {
-            const curTop = Math.max(0, secElem.offsetTop - 80)
-            const nextTop = nextSecElem ? Math.max(0, nextSecElem.offsetTop - 80) : maxScroll
+            const curTop = Math.max(0, getElementPageY(secElem) - 70)
+            const nextTop = nextSecElem ? Math.max(0, getElementPageY(nextSecElem) - 70) : maxScroll
             const targetY = curTop + secProgress * (nextTop - curTop)
             accumulatedScrollRef.current = targetY
             setScrollY(targetY, false)

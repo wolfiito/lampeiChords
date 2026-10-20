@@ -30,8 +30,12 @@ export function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(rem).padStart(2, '0')}`
 }
 
+function stripAccents(str: string): string {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
 export function normalizeSectionName(title: string): string {
-  return title
+  return stripAccents(title)
     .toLowerCase()
     .replace(/\b(repite|repetir|volver\s*a|repetition|repeat|x\d+|\d+x)\b/gi, '')
     .replace(/[()[\]{}:/\\-]/g, '')
@@ -114,13 +118,27 @@ export function calculateSongTiming(
     let parentSection: SectionTiming | undefined = undefined
     if (isEmptySection) {
       const normTitle = normalizeSectionName(sec.title)
+      // Pass 1: exact match backwards (e.g. "verso 2" matches "verso 2")
       for (let p = idx - 1; p >= 0; p--) {
         const prev = sections[p]
         if (prev.linesCount > 0 || prev.chordsCount > 0) {
           const prevNorm = normalizeSectionName(prev.title)
-          if (prevNorm === normTitle || prevNorm.startsWith(normTitle) || normTitle.startsWith(prevNorm)) {
+          if (prevNorm === normTitle) {
             parentSection = prev
             break
+          }
+        }
+      }
+      // Pass 2: prefix or substring match if no exact match
+      if (!parentSection) {
+        for (let p = idx - 1; p >= 0; p--) {
+          const prev = sections[p]
+          if (prev.linesCount > 0 || prev.chordsCount > 0) {
+            const prevNorm = normalizeSectionName(prev.title)
+            if (prevNorm.startsWith(normTitle) || normTitle.startsWith(prevNorm)) {
+              parentSection = prev
+              break
+            }
           }
         }
       }
