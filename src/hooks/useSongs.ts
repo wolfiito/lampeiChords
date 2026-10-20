@@ -83,32 +83,9 @@ export function useSongs() {
           lastCloudMaxUpdateRef.current = Math.max(lastCloudMaxUpdateRef.current, maxTime)
           lastCloudCountRef.current = cloudSongs.length
 
-          setSongs(prev => {
-            const cloudIds = new Set(cloudSongs.map(s => s.id))
-            const localOnly = prev.filter(s => !cloudIds.has(s.id) && !LEGACY_DEMO_IDS.has(s.id))
-
-            // Push any local-only songs in background
-            if (localOnly.length > 0) {
-              fetch('/api/songs', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ songs: localOnly })
-              }).catch(() => {})
-            }
-
-            const map = new Map<string, Song>()
-            cloudSongs.forEach(s => map.set(s.id, s))
-            prev.forEach(s => {
-              if (LEGACY_DEMO_IDS.has(s.id)) return
-              const existing = map.get(s.id)
-              if (!existing || (s.updatedAt && s.updatedAt > (existing.updatedAt || 0))) {
-                map.set(s.id, s)
-              }
-            })
-
-            const merged = Array.from(map.values())
-            return merged.length > 0 ? merged : cloudSongs
-          })
+          // Authoritative Cloud Sync: Cloud is the single source of truth!
+          // NEVER resurrect deleted songs or re-upload local items in a background GET!
+          setSongs(cloudSongs)
         }
         setSyncStatus('synced')
       }
@@ -282,7 +259,10 @@ export function useSongs() {
 
     // Delete in cloud
     fetch(`/api/songs?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
-      .then(() => notifyBroadcast())
+      .then(() => {
+        lastCloudCountRef.current = Math.max(0, lastCloudCountRef.current - 1)
+        notifyBroadcast()
+      })
       .catch(() => {})
   }
 
