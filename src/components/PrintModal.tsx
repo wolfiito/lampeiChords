@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
-import { Download, Printer, X, Loader2, Sparkles } from 'lucide-react'
+import { Download, Printer, X, Loader2, Sparkles, CheckCircle2 } from 'lucide-react'
 
 interface PrintModalProps {
   isOpen: boolean
   onClose: () => void
-  onExportPdf: (options: { columns: 1 | 2 | 3; size: 'compact' | 'normal' | 'large' }) => Promise<void>
-  onPrintBrowser: (options: { columns: 1 | 2 | 3; size: 'compact' | 'normal' | 'large' }) => void
+  onExportPdf: (options: { columns: 1 | 2; size?: 'normal' }) => Promise<void>
+  onPrintBrowser: (options: { columns: 1 | 2; size?: 'normal' }) => void
   songTitle: string
 }
 
@@ -16,8 +16,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   onPrintBrowser,
   songTitle
 }) => {
-  const [columns, setColumns] = useState<1 | 2 | 3>(2)
-  const [size, setSize] = useState<'compact' | 'normal' | 'large'>('normal')
+  const [columns, setColumns] = useState<1 | 2>(2)
   const [isExporting, setIsExporting] = useState(false)
 
   if (!isOpen) return null
@@ -25,7 +24,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   const handleDownloadPdf = async () => {
     try {
       setIsExporting(true)
-      await onExportPdf({ columns, size })
+      await onExportPdf({ columns, size: 'normal' })
       setIsExporting(false)
       onClose()
     } catch (err) {
@@ -35,7 +34,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   }
 
   const handleBrowserPrint = () => {
-    onPrintBrowser({ columns, size })
+    onPrintBrowser({ columns, size: 'normal' })
     onClose()
   }
 
@@ -70,77 +69,57 @@ export const PrintModal: React.FC<PrintModalProps> = ({
           <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
           <span>
             Canción: <strong className="text-white">{songTitle}</strong>. 
-            Formato <strong>Hoja A4</strong> con <strong>Base Arial 12</strong> y distribución por cuadros de sección. Garantiza <strong>1 sola página</strong> sin cortar estrofas.
+            Formato <strong>Hoja A4</strong> con <strong>Arial 12 y Auto-Ajuste Inteligente</strong> para garantizar siempre <strong>1 sola página</strong>.
           </span>
         </div>
 
-        {/* Columns Selector */}
+        {/* Columns Selector (Only 1 or 2 columns) */}
         <div className="mb-4">
           <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
             Distribución en la Hoja:
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setColumns(2)}
-              className={`p-3 rounded-2xl border text-center transition flex flex-col items-center ${
+              className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1 ${
                 columns === 2
                   ? 'bg-emerald-600 border-emerald-400 text-white shadow-lg shadow-emerald-600/30'
                   : 'bg-zinc-800/80 border-zinc-700/80 text-zinc-300 hover:bg-zinc-800'
               }`}
             >
-              <span className="font-bold text-sm">2 Columnas</span>
-              <span className="text-[10px] opacity-80 mt-0.5">⭐ A4 1 Página</span>
-            </button>
-
-            <button
-              onClick={() => setColumns(3)}
-              className={`p-3 rounded-2xl border text-center transition flex flex-col items-center ${
-                columns === 3
-                  ? 'bg-emerald-600 border-emerald-400 text-white shadow-lg shadow-emerald-600/30'
-                  : 'bg-zinc-800/80 border-zinc-700/80 text-zinc-300 hover:bg-zinc-800'
-              }`}
-            >
-              <span className="font-bold text-sm">3 Columnas</span>
-              <span className="text-[10px] opacity-80 mt-0.5">Canción larga</span>
+              <div className="flex items-center gap-1.5 font-bold text-sm">
+                <span>2 Columnas</span>
+                {columns === 2 && <CheckCircle2 className="w-4 h-4 text-emerald-200" />}
+              </div>
+              <span className="text-[11px] opacity-90 text-emerald-100 font-medium">⭐ Recomendado (1 Hoja)</span>
             </button>
 
             <button
               onClick={() => setColumns(1)}
-              className={`p-3 rounded-2xl border text-center transition flex flex-col items-center ${
+              className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1 ${
                 columns === 1
                   ? 'bg-emerald-600 border-emerald-400 text-white shadow-lg shadow-emerald-600/30'
                   : 'bg-zinc-800/80 border-zinc-700/80 text-zinc-300 hover:bg-zinc-800'
               }`}
             >
-              <span className="font-bold text-sm">1 Columna</span>
-              <span className="text-[10px] opacity-80 mt-0.5">Tradicional</span>
+              <div className="flex items-center gap-1.5 font-bold text-sm">
+                <span>1 Columna</span>
+                {columns === 1 && <CheckCircle2 className="w-4 h-4 text-emerald-200" />}
+              </div>
+              <span className="text-[11px] opacity-80 text-zinc-400">Tradicional</span>
             </button>
           </div>
         </div>
 
-        {/* Font Size Selector */}
-        <div className="mb-6">
-          <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-            Tipografía (Base Arial 12):
-          </label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['normal', 'compact', 'large'] as const).map(opt => (
-              <button
-                key={opt}
-                onClick={() => setSize(opt)}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex flex-col items-center ${
-                  size === opt
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                    : 'bg-zinc-800/80 border-zinc-700 text-zinc-400 hover:text-white'
-                }`}
-              >
-                <span>{opt === 'normal' ? 'Arial 12' : opt === 'compact' ? 'Compacto' : 'Grande'}</span>
-                <span className="text-[10px] opacity-75 font-normal mt-0.5">
-                  {opt === 'normal' ? '⭐ Auto A4' : opt === 'compact' ? '10.5 pt' : '14 pt'}
-                </span>
-              </button>
-            ))}
+        {/* Fixed Typography Badge (Always Arial 12 Auto-Ajuste) */}
+        <div className="mb-5 p-3 bg-zinc-800/70 border border-zinc-700/70 rounded-2xl flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-zinc-300 font-medium">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Tipografía: <strong className="text-white">Arial 12</strong></span>
           </div>
+          <span className="text-[11px] text-emerald-300 font-semibold bg-emerald-950/70 border border-emerald-500/40 px-2.5 py-0.5 rounded-lg">
+            Auto-Ajuste Inteligente A4
+          </span>
         </div>
 
         {/* Actions: Download PDF directly (primary) or Browser Print */}
@@ -153,12 +132,12 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             {isExporting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Generando PDF en 1 hoja...</span>
+                <span>Generando PDF A4 en 1 hoja...</span>
               </>
             ) : (
               <>
                 <Download className="w-4 h-4" />
-                <span>Descargar Archivo PDF (1 Hoja)</span>
+                <span>Descargar Archivo PDF A4 (1 Hoja)</span>
               </>
             )}
           </button>

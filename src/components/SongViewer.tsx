@@ -143,7 +143,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   }
 
   // Instant Native Vector PDF Download (Guaranteed 1 Page, NEVER freezes!)
-  const handleExportDirectPdf = async (opts: { columns: 1 | 2 | 3; size: 'compact' | 'normal' | 'large' }) => {
+  const handleExportDirectPdf = async (opts: { columns: 1 | 2; size?: 'normal' }) => {
     // Generate immediately using jsPDF native engine
     generateDirectSongPdf({
       parsed,
@@ -154,7 +154,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
       notation,
       preferFlats: accidental === 'flat',
       columns: opts.columns,
-      size: opts.size,
+      size: 'normal',
       filename: `${song.title} - chordsLampei`
     })
   }
