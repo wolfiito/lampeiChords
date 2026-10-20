@@ -23,31 +23,36 @@ export const SongPrintSheet = React.forwardRef<HTMLDivElement, SongPrintSheetPro
   semitoneShift,
   preferFlats,
   columns,
-  fontSizeMode = 'compact'
+  fontSizeMode = 'normal'
 }, ref) => {
   // Count lines to choose optimal auto font-size
   const totalLyricLines = parsed.lines.filter(l => l.type === 'lyric').length
-  const isLongSong = totalLyricLines > 32
+  const isLongSong = totalLyricLines > 36
+  const isVeryLongSong = totalLyricLines > 55
 
-  // Determine font size
-  let calculatedFontSize = '9.5pt'
-  let calculatedChordSize = '8.5pt'
-  let calculatedLineHeight = '1.18'
+  // Determine font size (Base Arial 12)
+  let calculatedFontSize = '11.5pt'
+  let calculatedChordSize = '10pt'
+  let calculatedLineHeight = '1.22'
 
-  if (fontSizeMode === 'compact' || (isLongSong && fontSizeMode !== 'large')) {
-    if (columns === 3) {
-      calculatedFontSize = '8pt'
-      calculatedChordSize = '7.5pt'
-      calculatedLineHeight = '1.12'
+  if (fontSizeMode === 'compact' || isVeryLongSong) {
+    calculatedFontSize = '9pt'
+    calculatedChordSize = '8pt'
+    calculatedLineHeight = '1.14'
+  } else if (fontSizeMode === 'normal') {
+    if (columns === 3 || isLongSong) {
+      calculatedFontSize = '10pt'
+      calculatedChordSize = '9pt'
+      calculatedLineHeight = '1.18'
     } else {
-      calculatedFontSize = isLongSong ? '7.5pt' : '8.5pt'
-      calculatedChordSize = isLongSong ? '7pt' : '8pt'
-      calculatedLineHeight = '1.14'
+      calculatedFontSize = '11.5pt'
+      calculatedChordSize = '10pt'
+      calculatedLineHeight = '1.22'
     }
   } else if (fontSizeMode === 'large') {
-    calculatedFontSize = '11pt'
-    calculatedChordSize = '10pt'
-    calculatedLineHeight = '1.25'
+    calculatedFontSize = '13pt'
+    calculatedChordSize = '11pt'
+    calculatedLineHeight = '1.28'
   }
 
   const columnClass = columns === 3
@@ -62,7 +67,7 @@ export const SongPrintSheet = React.forwardRef<HTMLDivElement, SongPrintSheetPro
       id="printable-song-sheet"
       className="bg-white text-black p-4 sm:p-6 w-full max-w-[800px] mx-auto box-border"
       style={{
-        fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        fontFamily: "Arial, Helvetica, -apple-system, BlinkMacSystemFont, sans-serif",
         color: '#111827',
         backgroundColor: '#ffffff'
       }}
@@ -126,6 +131,18 @@ export const SongPrintSheet = React.forwardRef<HTMLDivElement, SongPrintSheetPro
           }
 
           if (line.type === 'comment') {
+            if (line.isRepeat) {
+              return (
+                <div
+                  key={idx}
+                  className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-md px-2 py-1 my-1.5 text-[11px] font-bold flex items-center gap-1.5 select-none break-inside-avoid"
+                >
+                  <span>⤴</span>
+                  <span>[{line.comment?.toUpperCase()}]</span>
+                  <span className="font-normal text-emerald-700 text-[10px]">(Repite {line.parentTitle || line.comment})</span>
+                </div>
+              )
+            }
             return (
               <div
                 key={idx}

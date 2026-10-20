@@ -17,7 +17,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   songTitle
 }) => {
   const [columns, setColumns] = useState<1 | 2 | 3>(2)
-  const [size, setSize] = useState<'compact' | 'normal' | 'large'>('compact')
+  const [size, setSize] = useState<'compact' | 'normal' | 'large'>('normal')
   const [isExporting, setIsExporting] = useState(false)
 
   if (!isOpen) return null
@@ -52,7 +52,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             />
             <div>
               <h3 className="font-bold text-lg text-white">
-                Guardar en PDF <span className="text-emerald-400 text-xs font-normal">(1 Hoja)</span>
+                Guardar en PDF A4 <span className="text-emerald-400 text-xs font-normal">(1 Hoja)</span>
               </h3>
               <p className="text-xs text-zinc-400 font-medium">chords<strong className="text-emerald-400">Lampei</strong></p>
             </div>
@@ -70,7 +70,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
           <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
           <span>
             Canción: <strong className="text-white">{songTitle}</strong>. 
-            El diseño en <strong>2 Columnas Compacto</strong> ajusta la letra y acordes para caber en <strong>1 sola página de PDF</strong>.
+            Formato <strong>Hoja A4</strong> con <strong>Base Arial 12</strong> y distribución por cuadros de sección. Garantiza <strong>1 sola página</strong> sin cortar estrofas.
           </span>
         </div>
 
@@ -89,7 +89,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               }`}
             >
               <span className="font-bold text-sm">2 Columnas</span>
-              <span className="text-[10px] opacity-80 mt-0.5">⭐ 1 Página</span>
+              <span className="text-[10px] opacity-80 mt-0.5">⭐ A4 1 Página</span>
             </button>
 
             <button
@@ -121,20 +121,23 @@ export const PrintModal: React.FC<PrintModalProps> = ({
         {/* Font Size Selector */}
         <div className="mb-6">
           <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-            Ajuste de Tamaño:
+            Tipografía (Base Arial 12):
           </label>
           <div className="grid grid-cols-3 gap-2">
-            {(['compact', 'normal', 'large'] as const).map(opt => (
+            {(['normal', 'compact', 'large'] as const).map(opt => (
               <button
                 key={opt}
                 onClick={() => setSize(opt)}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold capitalize transition ${
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex flex-col items-center ${
                   size === opt
                     ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
                     : 'bg-zinc-800/80 border-zinc-700 text-zinc-400 hover:text-white'
                 }`}
               >
-                {opt === 'compact' ? 'Compacto (1 Hoja)' : opt === 'normal' ? 'Normal' : 'Grande'}
+                <span>{opt === 'normal' ? 'Arial 12' : opt === 'compact' ? 'Compacto' : 'Grande'}</span>
+                <span className="text-[10px] opacity-75 font-normal mt-0.5">
+                  {opt === 'normal' ? '⭐ Auto A4' : opt === 'compact' ? '10.5 pt' : '14 pt'}
+                </span>
               </button>
             ))}
           </div>
