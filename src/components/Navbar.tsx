@@ -6,7 +6,8 @@ import {
   BookOpen,
   FileDown,
   Maximize,
-  Minimize
+  Minimize,
+  ArrowLeft
 } from 'lucide-react'
 
 interface BeforeInstallPromptEvent extends Event {
@@ -20,6 +21,7 @@ interface NavbarProps {
   onToggleEdit: () => void
   onOpenLibrary: () => void
   onOpenPrint: () => void
+  onBackToLibrary?: () => void
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -27,7 +29,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   isEditing,
   onToggleEdit,
   onOpenLibrary,
-  onOpenPrint
+  onOpenPrint,
+  onBackToLibrary
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
@@ -74,22 +77,37 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="no-print sticky top-0 z-40 bg-zinc-900/95 backdrop-blur-md border-b border-zinc-800 text-zinc-100">
       <div className="max-w-6xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
-        {/* Left: Library drawer toggle & Brand with Lampei Logo */}
+        {/* Left: Back to library button or drawer toggle & Brand with Lampei Logo */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <button
-            onClick={onOpenLibrary}
-            className="p-1.5 sm:p-2 bg-zinc-800/80 hover:bg-zinc-800 text-zinc-200 rounded-xl border border-zinc-700 transition flex items-center gap-1.5"
-            title="Abrir repertorio de canciones"
-          >
-            <Menu className="w-5 h-5 text-emerald-400" />
-            <span className="hidden md:inline text-xs font-bold">Repertorio</span>
-          </button>
+          {onBackToLibrary ? (
+            <button
+              onClick={onBackToLibrary}
+              className="px-2.5 sm:px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white rounded-xl border border-zinc-700 transition flex items-center gap-1.5 font-bold text-xs shadow-sm"
+              title="Volver a la lista de canciones"
+            >
+              <ArrowLeft className="w-4 h-4 text-emerald-400" />
+              <span>Repertorio</span>
+            </button>
+          ) : (
+            <button
+              onClick={onOpenLibrary}
+              className="p-1.5 sm:p-2 bg-zinc-800/80 hover:bg-zinc-800 text-zinc-200 rounded-xl border border-zinc-700 transition flex items-center gap-1.5"
+              title="Abrir repertorio de canciones"
+            >
+              <Menu className="w-5 h-5 text-emerald-400" />
+              <span className="hidden md:inline text-xs font-bold">Repertorio</span>
+            </button>
+          )}
 
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div
+            onClick={onBackToLibrary}
+            className={`flex items-center gap-1.5 sm:gap-2.5 ${onBackToLibrary ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
+            title={onBackToLibrary ? 'Volver al Repertorio' : undefined}
+          >
             <img
               src="/logo.png"
               alt="Logo Lampei"
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-xl bg-black p-0.5 border border-emerald-900/60 shadow-md shadow-emerald-950/40 shrink-0"
+              className="h-8 sm:h-9 w-auto object-contain shrink-0 drop-shadow-[0_2px_10px_rgba(16,185,129,0.4)] transition-transform hover:scale-105"
             />
             <span className="font-black text-base sm:text-lg tracking-tight text-white whitespace-nowrap">
               chords<span className="text-emerald-400">Lampei</span>

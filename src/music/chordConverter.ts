@@ -44,15 +44,43 @@ interface ChordPosition {
   index: number
 }
 
+function snapIndexToWord(text: string, rawIndex: number): number {
+  if (rawIndex <= 0) return 0
+  if (rawIndex >= text.length) return text.length
+
+  if (rawIndex === 0 || text[rawIndex - 1] === ' ') {
+    if (text[rawIndex] === ' ') {
+      let nextWord = rawIndex
+      while (nextWord < text.length && text[nextWord] === ' ') nextWord++
+      if (nextWord - rawIndex <= 3) return nextWord
+    }
+    return rawIndex
+  }
+
+  let start = rawIndex
+  while (start > 0 && text[start - 1] !== ' ') start--
+
+  let end = rawIndex
+  while (end < text.length && text[end] !== ' ') end++
+
+  const wordLen = end - start
+  if (rawIndex - start <= 2 || (rawIndex - start) <= Math.floor(wordLen / 3)) {
+    return start
+  }
+  if (end - rawIndex <= 2) {
+    return end
+  }
+  return start
+}
+
 function extractChordsWithPositions(line: string): ChordPosition[] {
   const result: ChordPosition[] = []
-  // Match contiguous non-whitespace words
-  const regex = /\S+/g
+  // Split hyphenated chords (e.g. Bsus-B -> Bsus B) while preserving approximate index
+  const chordRegex = /[A-G][b#]?(?:m|maj|min|sus|dim|aug|add)?[0-9]?(?:\/[A-G][b#]?)?/g
   let match: RegExpExecArray | null
 
-  while ((match = regex.exec(line)) !== null) {
-    const rawWord = match[0]
-    const cleanChord = rawWord.replace(/^[([<{]+|[)\]}>,.:]+$/g, '').trim()
+  while ((match = chordRegex.exec(line)) !== null) {
+    const cleanChord = match[0].trim()
     if (isValidChordToken(cleanChord)) {
       result.push({
         chord: cleanChord,
@@ -108,14 +136,19 @@ export function convertTraditionalToChordPro(rawText: string, metadata?: { title
 
       // If next line is a lyric line (not empty, not another chord line, not a section header)
       if (nextLine.trim() && !isChordLine(nextLine) && !nextLine.trim().match(/^\[?[A-Za-z0-9áéíóúÁÉÍÓÚ\s-]+\]?:?$/)) {
-        let merged = nextLine
-        // Insert chords from right to left to keep string indices stable
-        const reversedChords = [...chords].sort((a, b) => b.index - a.index)
+        const leadLyrics = nextLine.search(/\S/)
+        if (leadLyrics === 0 && chords.length > 0 && chords[0].index > 10 && chords.length <= 2) {
+          chords[0].index = 0
+        }
 
+        const reversedChords = chords
+          .map(c => ({ chord: c.chord, index: snapIndexToWord(nextLine, c.index) }))
+          .sort((a, b) => b.index - a.index)
+
+        let merged = nextLine
         for (const { chord, index } of reversedChords) {
           if (index >= merged.length) {
-            // Pad spaces if the lyric line is shorter than chord position
-            merged = merged.padEnd(index, ' ') + `[${chord}]`
+            merged = merged + ` [${chord}]`
           } else {
             merged = merged.slice(0, index) + `[${chord}]` + merged.slice(index)
           }

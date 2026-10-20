@@ -13,7 +13,7 @@ const NOTE_TO_SEMITONE: Record<string, number> = {
   'C': 0, 'B#': 0, 'C#': 1, 'DB': 1, 'D': 2, 'D#': 3, 'EB': 3, 'E': 4, 'FB': 4,
   'F': 5, 'E#': 5, 'F#': 6, 'GB': 6, 'G': 7, 'G#': 8, 'AB': 8, 'A': 9, 'A#': 10, 'BB': 10, 'B': 11, 'CB': 11,
   // Latin
-  'DO': 0, 'DO#': 1, 'REB': 1, 'RE': 2, 'RE#': 3, 'MIB': 3, 'MI': 4,
+  'DO': 0, 'DO#': 1, 'DOB': 11, 'REB': 1, 'RE': 2, 'RE#': 3, 'MIB': 3, 'MI': 4, 'FAB': 4,
   'FA': 5, 'FA#': 6, 'SOLB': 6, 'SOL': 7, 'SOL#': 8, 'LAB': 8, 'LA': 9, 'LA#': 10, 'SIB': 10, 'SI': 11
 }
 
@@ -21,10 +21,10 @@ const NOTE_TO_SEMITONE: Record<string, number> = {
 const FLAT_KEYS = new Set(['F', 'BB', 'EB', 'AB', 'DB', 'GB', 'DM', 'GM', 'CM', 'FM', 'BBM', 'EBM'])
 
 /**
- * Normalizes a note string to uppercase without spaces
+ * Normalizes a note string to uppercase without spaces and converts unicode accidentals
  */
 export function normalizeNote(note: string): string {
-  return note.trim().toUpperCase()
+  return note.trim().replace(/♭/g, 'b').replace(/♯/g, '#').toUpperCase()
 }
 
 /**
@@ -32,7 +32,15 @@ export function normalizeNote(note: string): string {
  */
 export function getSemitone(note: string): number {
   const norm = normalizeNote(note)
-  return NOTE_TO_SEMITONE[norm] ?? -1
+  if (NOTE_TO_SEMITONE[norm] !== undefined) return NOTE_TO_SEMITONE[norm]
+
+  // Fallback: if note is a full chord name (e.g. "Am", "Bbm", "F#m", "Do#m")
+  const parsed = parseChord(note)
+  if (parsed && parsed.root) {
+    const rootNorm = normalizeNote(parsed.root)
+    return NOTE_TO_SEMITONE[rootNorm] ?? -1
+  }
+  return -1
 }
 
 /**
@@ -40,8 +48,13 @@ export function getSemitone(note: string): number {
  */
 export function prefersFlats(keyOrChord: string): boolean {
   const norm = normalizeNote(keyOrChord)
-  if (norm.includes('B') && !norm.startsWith('B') && !norm.startsWith('SI')) return true
-  return FLAT_KEYS.has(norm)
+  if (FLAT_KEYS.has(norm)) return true
+  const parsed = parseChord(keyOrChord)
+  if (parsed && (parsed.root.includes('b') || parsed.root.includes('B'))) {
+    const r = parsed.root.toUpperCase()
+    if (!r.startsWith('B') && !r.startsWith('SI')) return true
+  }
+  return norm.includes('B') && !norm.startsWith('B') && !norm.startsWith('SI')
 }
 
 /**
@@ -58,7 +71,11 @@ export function semitoneToNote(semitone: number, useFlats = false, notation: Not
 /**
  * Converts any note or root between Anglo and Latin notation
  */
-export function convertNotation(noteOrChord: string, targetNotation: NotationSystem): string {
+export function convertNotation(
+  noteOrChord: string,
+  targetNotation: NotationSystem,
+  preferFlats?: boolean
+): string {
   const parsed = parseChord(noteOrChord)
   if (!parsed) return noteOrChord
 
@@ -66,14 +83,14 @@ export function convertNotation(noteOrChord: string, targetNotation: NotationSys
   const rootSemi = getSemitone(root)
   if (rootSemi === -1) return noteOrChord
 
-  const isFlat = root.includes('b') || root.includes('B')
+  const isFlat = preferFlats !== undefined ? preferFlats : (root.includes('b') || root.includes('♭'))
   const newRoot = semitoneToNote(rootSemi, isFlat, targetNotation)
   
   let newBass = ''
   if (bass) {
     const bassSemi = getSemitone(bass)
     if (bassSemi !== -1) {
-      const bassFlat = bass.includes('b') || bass.includes('B')
+      const bassFlat = preferFlats !== undefined ? preferFlats : (bass.includes('b') || bass.includes('♭'))
       newBass = '/' + semitoneToNote(bassSemi, bassFlat, targetNotation)
     }
   }
@@ -96,7 +113,7 @@ export interface ParsedChord {
 const CHORD_REGEX = /^([A-Ga-g](?:#|b)?|Do|Re|Mi|Fa|Sol|La|Si|DO|RE|MI|FA|SOL|LA|SI)(?:#|b)?([^\s/]*)(?:\/([A-Ga-g](?:#|b)?|Do|Re|Mi|Fa|Sol|La|Si|DO|RE|MI|FA|SOL|LA|SI)(?:#|b)?)?$/
 
 export function parseChord(chordStr: string): ParsedChord | null {
-  const clean = chordStr.trim()
+  const clean = chordStr.trim().replace(/♭/g, 'b').replace(/♯/g, '#')
   if (!clean) return null
 
   // Detailed regex matching roots

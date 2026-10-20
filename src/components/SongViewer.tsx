@@ -6,18 +6,24 @@ import {
   Columns,
   Sparkles,
   ChevronDown,
-  FileDown
+  ChevronLeft,
+  ChevronRight,
+  FileDown,
+  ArrowLeft
 } from 'lucide-react'
 import type { Song, NotationSystem } from '../types/song'
 import { parseChordPro } from '../music/chordPro'
 import {
   transposeChord,
-  convertNotation,
   CHROMATIC_SHARPS_ANGLO,
   CHROMATIC_SHARPS_LATIN,
+  CHROMATIC_FLATS_ANGLO,
+  CHROMATIC_FLATS_LATIN,
   getDistanceBetweenKeys
 } from '../music/musicTheory'
 import { ChordDiagram } from './ChordDiagram'
+import { getAllGuitarChordFingerings } from '../music/guitarChords'
+import { BassChordDiagram } from './BassChordDiagram'
 import { CapoModal } from './CapoModal'
 import { MetronomeBar } from './MetronomeBar'
 import { PrintModal } from './PrintModal'
@@ -29,6 +35,8 @@ interface SongViewerProps {
   onEdit: () => void
   isPrintRequested?: boolean
   onClosePrint?: () => void
+  onBackToLibrary?: () => void
+  activeSectionIndex?: number
 }
 
 export const SongViewer: React.FC<SongViewerProps> = ({
@@ -36,7 +44,9 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   onUpdateSong,
   onEdit,
   isPrintRequested = false,
-  onClosePrint
+  onClosePrint,
+  onBackToLibrary,
+  activeSectionIndex = -1
 }) => {
   const [semitoneShift, setSemitoneShift] = useState<number>(0)
   const [notation, setNotation] = useState<NotationSystem>('anglo')
@@ -44,9 +54,29 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   const [numColumns, setNumColumns] = useState<1 | 2>(1)
   const [stageMode, setStageMode] = useState<boolean>(false)
   const [activeChordModal, setActiveChordModal] = useState<string | null>(null)
+  const [preferredInstrument, setPreferredInstrument] = useState<'guitar' | 'bass'>(() => {
+    try {
+      return (localStorage.getItem('chords_preferred_instrument') as 'guitar' | 'bass') || 'guitar'
+    } catch {
+      return 'guitar'
+    }
+  })
+  const [guitarVarIndex, setGuitarVarIndex] = useState<number>(0)
   const [isCapoModalOpen, setIsCapoModalOpen] = useState<boolean>(false)
   const [showMetronome, setShowMetronome] = useState<boolean>(false)
   const [isLocalPrintOpen, setIsLocalPrintOpen] = useState<boolean>(false)
+
+  // Reset guitar variation when modal chord changes
+  React.useEffect(() => {
+    setGuitarVarIndex(0)
+  }, [activeChordModal])
+
+  const guitarVariations = useMemo(() => {
+    if (!activeChordModal) return []
+    return getAllGuitarChordFingerings(activeChordModal)
+  }, [activeChordModal])
+
+  const currentGuitarVar = guitarVariations[guitarVarIndex] || guitarVariations[0]
 
   const isPrintModalOpen = isLocalPrintOpen || isPrintRequested
 
@@ -60,11 +90,26 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     return parseChordPro(song.content)
   }, [song.content])
 
+  // User preference: sharps (#) vs flats (b)
+  const [accidental, setAccidental] = useState<'sharp' | 'flat'>(() => {
+    const baseKey = song.currentKey || song.originalKey || 'C'
+    return baseKey.includes('b') || ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb'].includes(baseKey)
+      ? 'flat'
+      : 'sharp'
+  })
+
   // Current key calculated with transposition
   const effectiveKey = useMemo(() => {
     const baseKey = song.currentKey || song.originalKey || 'C'
-    return transposeChord(baseKey, semitoneShift, undefined, notation)
-  }, [song.currentKey, song.originalKey, semitoneShift, notation])
+    return transposeChord(baseKey, semitoneShift, accidental === 'flat', notation)
+  }, [song.currentKey, song.originalKey, semitoneShift, accidental, notation])
+
+  const keyOptions = useMemo(() => {
+    if (notation === 'latin') {
+      return accidental === 'flat' ? CHROMATIC_FLATS_LATIN : CHROMATIC_SHARPS_LATIN
+    }
+    return accidental === 'flat' ? CHROMATIC_FLATS_ANGLO : CHROMATIC_SHARPS_ANGLO
+  }, [notation, accidental])
 
   const handleKeySelect = (targetKey: string) => {
     const baseKey = song.currentKey || song.originalKey || 'C'
@@ -80,7 +125,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   const handleSaveTransposed = () => {
     if (semitoneShift === 0) return
     const newContent = song.content.replace(/\[([^\]]+)\]/g, (_match, chord) => {
-      const transposed = transposeChord(chord, semitoneShift, undefined, notation)
+      const transposed = transposeChord(chord, semitoneShift, accidental === 'flat', notation)
       return `[${transposed}]`
     })
     onUpdateSong({
@@ -100,6 +145,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
       tempo: song.tempo,
       semitoneShift,
       notation,
+      preferFlats: accidental === 'flat',
       columns: opts.columns,
       size: opts.size,
       filename: `${song.title} - chordsLampei`
@@ -126,6 +172,17 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           {/* Row 1: Tonalidad y Transposición */}
           <div className="flex items-center justify-between gap-2 overflow-x-auto scrollbar-none pb-0.5">
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {onBackToLibrary && (
+                <button
+                  onClick={onBackToLibrary}
+                  title="Volver al Repertorio"
+                  className="px-2 py-1 text-xs font-bold text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-xl border border-zinc-700 flex items-center gap-1 transition shrink-0"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="hidden sm:inline">Repertorio</span>
+                </button>
+              )}
+
               <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-emerald-400">
                 Tono:
               </span>
@@ -156,7 +213,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                   onChange={e => handleKeySelect(e.target.value)}
                   className="appearance-none bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm px-2.5 sm:px-3 py-1 sm:py-1.5 pr-7 rounded-xl shadow-md border border-emerald-400 cursor-pointer focus:outline-none"
                 >
-                  {(notation === 'latin' ? CHROMATIC_SHARPS_LATIN : CHROMATIC_SHARPS_ANGLO).map(k => (
+                  {keyOptions.map(k => (
                     <option key={k} value={k} className="bg-zinc-900 text-white">
                       {k}
                     </option>
@@ -208,14 +265,27 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               )}
             </div>
 
-            {/* Notation switch */}
-            <button
-              onClick={() => setNotation(n => (n === 'anglo' ? 'latin' : 'anglo'))}
-              title="Cambiar cifrado entre C D E y Do Re Mi"
-              className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold rounded-xl border border-zinc-700 transition shrink-0"
-            >
-              {notation === 'anglo' ? 'C D E' : 'Do Re Mi'}
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Notation switch */}
+              <button
+                onClick={() => setNotation(n => (n === 'anglo' ? 'latin' : 'anglo'))}
+                title="Cambiar cifrado entre C D E y Do Re Mi"
+                className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold rounded-xl border border-zinc-700 transition"
+              >
+                {notation === 'anglo' ? 'C D E' : 'Do Re Mi'}
+              </button>
+
+              {/* Accidental switch: ♯ / ♭ */}
+              <button
+                onClick={() => setAccidental(a => (a === 'sharp' ? 'flat' : 'sharp'))}
+                title="Alternar entre sostenidos (#) y bemoles (♭)"
+                className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold rounded-xl border border-zinc-700 transition flex items-center gap-1"
+              >
+                <span className={accidental === 'sharp' ? 'text-emerald-400 font-black' : 'text-zinc-500'}>♯</span>
+                <span className="text-zinc-600">/</span>
+                <span className={accidental === 'flat' ? 'text-emerald-400 font-black' : 'text-zinc-500'}>♭</span>
+              </button>
+            </div>
           </div>
 
           {/* Row 2: Herramientas secundarias (Guardar PDF, Cejilla, Metrónomo, Zoom, Columnas) */}
@@ -364,37 +434,55 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           }`}
           style={{ fontSize: `${fontSize}px` }}
         >
-          {parsed.lines.map((line, idx) => {
-            if (line.type === 'empty') {
-              return <div key={idx} className="h-3 sm:h-4" />
-            }
+          {(() => {
+            let sectionCount = 0
+            return parsed.lines.map((line, idx) => {
+              if (line.type === 'empty') {
+                return <div key={idx} className="h-3 sm:h-4" />
+              }
 
-            if (line.type === 'comment') {
-              return (
-                <div
-                  key={idx}
-                  className="break-inside-avoid mt-4 mb-1.5 font-bold tracking-wide uppercase text-xs sm:text-sm border-l-4 border-emerald-400 pl-2.5 text-emerald-400 select-none"
-                >
-                  {line.comment}
-                </div>
-              )
-            }
+              if (line.type === 'comment') {
+                const sIdx = sectionCount++
+                const isActive = activeSectionIndex === sIdx
+                return (
+                  <div
+                    key={idx}
+                    id={`song-section-${sIdx}`}
+                    data-section-index={sIdx}
+                    className={`break-inside-avoid mt-5 mb-2 font-bold tracking-wide uppercase text-xs sm:text-sm pl-2.5 select-none transition-all duration-300 ${
+                      isActive
+                        ? 'border-l-4 border-emerald-400 bg-emerald-500/15 py-1.5 pr-3 rounded-r-xl text-emerald-300 font-black shadow-[0_0_20px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500/30'
+                        : 'border-l-4 border-emerald-400 text-emerald-400'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {isActive && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />}
+                      <span>{line.comment}</span>
+                    </span>
+                  </div>
+                )
+              }
 
             if (line.type === 'directive') {
               return null
             }
 
+            const hasAnyChords = line.segments?.some(s => !!s.chord)
+            const hasLyrics = line.segments?.some(s => (s.text || '').trim().length > 0)
+            const isChordOnlyLine = hasAnyChords && !hasLyrics
+
             return (
               <div
                 key={idx}
-                className="break-inside-avoid flex flex-wrap items-end my-0.5 sm:my-1 font-mono tracking-wide max-w-full"
+                className={`break-inside-avoid flex flex-wrap items-end my-0.5 sm:my-1 font-mono tracking-wide max-w-full ${
+                  isChordOnlyLine ? 'gap-3 sm:gap-4 py-0.5' : ''
+                }`}
               >
                 {line.segments?.map((seg, sIdx) => {
                   const rawChord = seg.chord
                   let chordDisplay = ''
                   if (rawChord) {
-                    chordDisplay = transposeChord(rawChord, semitoneShift, undefined, notation)
-                    chordDisplay = convertNotation(chordDisplay, notation)
+                    chordDisplay = transposeChord(rawChord, semitoneShift, accidental === 'flat', notation)
                   }
 
                   return (
@@ -419,7 +507,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                         <span className="h-3.5 select-none opacity-0 text-xs">.</span>
                       )}
 
-                      <span className={`font-sans ${stageMode ? 'text-emerald-50' : 'text-zinc-100'}`}>
+                      <span className={`font-sans whitespace-pre ${stageMode ? 'text-emerald-50' : 'text-zinc-100'}`}>
                         {seg.text || (chordDisplay ? ' ' : '')}
                       </span>
                     </span>
@@ -427,7 +515,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 })}
               </div>
             )
-          })}
+          })})()}
         </div>
       </div>
 
@@ -435,20 +523,122 @@ export const SongViewer: React.FC<SongViewerProps> = ({
       {activeChordModal && (
         <div
           onClick={() => setActiveChordModal(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/75 backdrop-blur-sm animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm animate-in fade-in"
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="bg-zinc-900 border border-emerald-900/60 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col items-center max-w-xs w-full text-center"
+            className="bg-zinc-900 border border-emerald-900/60 rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col items-center max-w-sm w-full text-center max-h-[92vh] overflow-y-auto scrollbar-none"
           >
-            <h4 className="text-lg sm:text-xl font-black text-white mb-0.5">Digitación de Acorde</h4>
-            <p className="text-xs text-emerald-400 mb-3 sm:mb-4">Guitarra Estándar (6 cuerdas)</p>
+            {/* Header: Chord Name + Instrument Selector Tabs */}
+            <div className="flex items-center justify-between w-full mb-3 pb-2 border-b border-zinc-800">
+              <div className="text-left">
+                <span className="text-lg sm:text-xl font-black text-white block leading-tight">
+                  {activeChordModal}
+                </span>
+                <span className="text-[11px] text-emerald-400 font-semibold">
+                  {preferredInstrument === 'guitar' ? 'Guitarra (6 cuerdas)' : 'Bajo Eléctrico'}
+                </span>
+              </div>
 
-            <ChordDiagram chord={activeChordModal} width={170} height={200} showName={true} />
+              {/* Instrument Toggle */}
+              <div className="flex items-center bg-zinc-800 p-0.5 rounded-xl border border-zinc-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreferredInstrument('guitar')
+                    try { localStorage.setItem('chords_preferred_instrument', 'guitar') } catch {}
+                  }}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
+                    preferredInstrument === 'guitar'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  🎸 Guitarra
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreferredInstrument('bass')
+                    try { localStorage.setItem('chords_preferred_instrument', 'bass') } catch {}
+                  }}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
+                    preferredInstrument === 'bass'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  🎸 Bajo
+                </button>
+              </div>
+            </div>
+
+            {/* Instrument Diagram Content */}
+            {preferredInstrument === 'guitar' ? (
+              <div className="flex flex-col items-center py-1 w-full">
+                {/* Variations Carousel for Guitar */}
+                {guitarVariations.length > 1 && (
+                  <div className="flex items-center justify-between w-full bg-zinc-800/90 px-2.5 py-1.5 rounded-xl border border-zinc-700/80 mb-2.5 text-xs shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setGuitarVarIndex(i => Math.max(0, i - 1))}
+                      disabled={guitarVarIndex === 0}
+                      className="p-1 text-zinc-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed rounded-lg hover:bg-zinc-700 transition"
+                      title="Posición anterior"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    <div className="text-center px-1">
+                      <span className="font-bold text-white text-xs block leading-tight">
+                        {currentGuitarVar?.label || 'Posición Estándar'}
+                      </span>
+                      <span className="text-[10px] text-emerald-400 font-medium">
+                        {currentGuitarVar?.description || ''} · ({guitarVarIndex + 1} de {guitarVariations.length})
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setGuitarVarIndex(i => Math.min(guitarVariations.length - 1, i + 1))}
+                      disabled={guitarVarIndex === guitarVariations.length - 1}
+                      className="p-1 text-zinc-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed rounded-lg hover:bg-zinc-700 transition"
+                      title="Siguiente posición"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                <ChordDiagram
+                  chord={activeChordModal}
+                  fingering={currentGuitarVar?.fingering}
+                  width={180}
+                  height={210}
+                  showName={false}
+                />
+
+                {currentGuitarVar && (
+                  <div className="mt-2.5 text-center">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                      {currentGuitarVar.fretRange}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-full flex flex-col items-center">
+                <BassChordDiagram
+                  chord={activeChordModal}
+                  notation={notation}
+                  preferFlats={accidental === 'flat'}
+                />
+              </div>
+            )}
 
             <button
               onClick={() => setActiveChordModal(null)}
-              className="mt-4 sm:mt-5 w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl transition"
+              className="mt-3.5 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm rounded-xl border border-zinc-700 transition"
             >
               Cerrar
             </button>

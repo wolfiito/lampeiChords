@@ -1,8 +1,11 @@
 import React from 'react'
 import { getGuitarChordFingering } from '../music/guitarChords'
 
+import type { ChordFingering } from '../types/song'
+
 interface ChordDiagramProps {
   chord: string
+  fingering?: ChordFingering
   width?: number
   height?: number
   showName?: boolean
@@ -10,11 +13,12 @@ interface ChordDiagramProps {
 
 export const ChordDiagram: React.FC<ChordDiagramProps> = ({
   chord,
+  fingering: passedFingering,
   width = 130,
   height = 150,
   showName = true,
 }) => {
-  const fingering = getGuitarChordFingering(chord)
+  const fingering = passedFingering || getGuitarChordFingering(chord)
 
   if (!fingering) {
     return (

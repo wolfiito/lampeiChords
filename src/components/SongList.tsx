@@ -7,8 +7,7 @@ import {
   Music,
   X,
   Upload,
-  Download,
-  RotateCcw
+  Download
 } from 'lucide-react'
 import type { Song } from '../types/song'
 
@@ -23,7 +22,6 @@ interface SongListProps {
   onDeleteSong: (id: string) => void
   onOpenImportModal: () => void
   onExportLibrary: () => void
-  onResetToDefaults: () => void
 }
 
 export const SongList: React.FC<SongListProps> = ({
@@ -36,8 +34,7 @@ export const SongList: React.FC<SongListProps> = ({
   onDuplicateSong,
   onDeleteSong,
   onOpenImportModal,
-  onExportLibrary,
-  onResetToDefaults
+  onExportLibrary
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
@@ -84,27 +81,29 @@ export const SongList: React.FC<SongListProps> = ({
         </div>
 
         {/* Action Buttons: New Song & Import */}
-        <div className="p-4 grid grid-cols-2 gap-2 border-b border-zinc-800/80">
-          <button
-            onClick={() => {
-              onNewSong()
-              onClose()
-            }}
-            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            Nueva Canción
-          </button>
-          <button
-            onClick={() => {
-              onOpenImportModal()
-              onClose()
-            }}
-            className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs rounded-xl border border-zinc-700 transition flex items-center justify-center gap-1.5"
-          >
-            <Upload className="w-4 h-4 text-emerald-400" />
-            Importar / Pegar
-          </button>
+        <div className="p-3 sm:p-4 space-y-2 border-b border-zinc-800/80">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                onNewSong()
+                onClose()
+              }}
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nueva</span>
+            </button>
+            <button
+              onClick={() => {
+                onOpenImportModal()
+                onClose()
+              }}
+              className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs rounded-xl border border-zinc-700 transition flex items-center justify-center gap-1.5"
+            >
+              <Upload className="w-4 h-4 text-emerald-400" />
+              <span>Importar</span>
+            </button>
+          </div>
         </div>
 
         {/* Search Input */}
@@ -232,7 +231,7 @@ export const SongList: React.FC<SongListProps> = ({
           )}
         </div>
 
-        {/* Drawer Footer: Backup & Reset */}
+        {/* Drawer Footer: Backup */}
         <div className="p-3 border-t border-zinc-800 bg-zinc-950/50 flex items-center justify-between text-xs text-zinc-400">
           <button
             onClick={onExportLibrary}
@@ -240,20 +239,7 @@ export const SongList: React.FC<SongListProps> = ({
             title="Descargar copia de seguridad en JSON de todas tus canciones"
           >
             <Download className="w-3.5 h-3.5" />
-            Descargar Respaldo
-          </button>
-
-          <button
-            onClick={() => {
-              if (confirm('¿Restablecer las canciones iniciales de demostración?')) {
-                onResetToDefaults()
-              }
-            }}
-            className="flex items-center gap-1.5 hover:text-amber-400 py-1 px-2 rounded-lg hover:bg-zinc-800 transition"
-            title="Restablecer repertorio predeterminado"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Restablecer demos
+            Descargar Respaldo (JSON)
           </button>
         </div>
       </div>

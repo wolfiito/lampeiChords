@@ -61,7 +61,7 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
     setContent(converted)
   }
 
-  const quickChords = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Am', 'Em', 'Dm', 'G7', 'C7', 'D7']
+  const quickChords = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Bb', 'Eb', 'Ab', 'F#', 'Am', 'Em', 'Dm', 'G7', 'C7', 'D7']
   const quickSections = ['[Intro]', '[Verso 1]', '[Verso 2]', '[Coro]', '[Puente]', '[Solo]', '[Outro]']
 
   const liveParsed = parseChordPro(content)

@@ -1,6 +1,6 @@
 import React from 'react'
 import type { ParsedSong, NotationSystem } from '../types/song'
-import { transposeChord, convertNotation } from '../music/musicTheory'
+import { transposeChord } from '../music/musicTheory'
 
 interface SongPrintSheetProps {
   parsed: ParsedSong
@@ -9,6 +9,7 @@ interface SongPrintSheetProps {
   tempo?: number
   notation: NotationSystem
   semitoneShift: number
+  preferFlats?: boolean
   columns: 1 | 2 | 3
   fontSizeMode?: 'compact' | 'normal' | 'large'
 }
@@ -20,6 +21,7 @@ export const SongPrintSheet = React.forwardRef<HTMLDivElement, SongPrintSheetPro
   tempo,
   notation,
   semitoneShift,
+  preferFlats,
   columns,
   fontSizeMode = 'compact'
 }, ref) => {
@@ -70,9 +72,9 @@ export const SongPrintSheet = React.forwardRef<HTMLDivElement, SongPrintSheetPro
         {/* Left: Logo & Brand */}
         <div className="flex items-center gap-2">
           <img
-            src="/logo.png"
+            src="/logo-green.png"
             alt="Logo Lampei"
-            className="w-8 h-8 object-contain rounded-lg bg-black p-0.5"
+            className="h-8 w-auto object-contain shrink-0"
           />
           <div>
             <span className="font-black text-sm tracking-tight text-zinc-900 block leading-tight">
@@ -138,17 +140,22 @@ export const SongPrintSheet = React.forwardRef<HTMLDivElement, SongPrintSheetPro
             return null
           }
 
+          const hasAnyChords = line.segments?.some(s => !!s.chord)
+          const hasLyrics = line.segments?.some(s => (s.text || '').trim().length > 0)
+          const isChordOnlyLine = hasAnyChords && !hasLyrics
+
           return (
             <div
               key={idx}
-              className="flex flex-wrap items-end my-px font-mono tracking-wide break-inside-avoid"
+              className={`flex flex-wrap items-end my-px font-mono tracking-wide break-inside-avoid ${
+                isChordOnlyLine ? 'gap-3 sm:gap-4 py-0.5' : ''
+              }`}
             >
               {line.segments?.map((seg, sIdx) => {
                 const rawChord = seg.chord
                 let chordDisplay = ''
                 if (rawChord) {
-                  chordDisplay = transposeChord(rawChord, semitoneShift, undefined, notation)
-                  chordDisplay = convertNotation(chordDisplay, notation)
+                  chordDisplay = transposeChord(rawChord, semitoneShift, preferFlats, notation)
                 }
 
                 return (
@@ -166,7 +173,7 @@ export const SongPrintSheet = React.forwardRef<HTMLDivElement, SongPrintSheetPro
                     ) : (
                       <span className="h-2.5 opacity-0 select-none">.</span>
                     )}
-                    <span className="font-sans text-zinc-900">
+                    <span className="font-sans whitespace-pre text-zinc-900">
                       {seg.text || (chordDisplay ? ' ' : '')}
                     </span>
                   </span>

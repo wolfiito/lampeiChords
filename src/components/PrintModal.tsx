@@ -48,7 +48,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             <img
               src="/logo.png"
               alt="Lampei"
-              className="w-9 h-9 object-contain rounded-xl bg-black p-0.5 border border-emerald-900/50"
+              className="h-9 w-auto object-contain shrink-0 drop-shadow-[0_2px_10px_rgba(16,185,129,0.35)]"
             />
             <div>
               <h3 className="font-bold text-lg text-white">

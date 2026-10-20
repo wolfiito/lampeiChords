@@ -10,7 +10,13 @@ const SECTION_KEYWORDS = new Set([
 
 export function isSectionHeader(text: string): boolean {
   const norm = text.trim().toUpperCase()
-  return SECTION_KEYWORDS.has(norm) || norm.startsWith('VERSO') || norm.startsWith('VERSE') || norm.startsWith('PARTE')
+  if (SECTION_KEYWORDS.has(norm)) return true
+  const prefixes = [
+    'VERSO', 'VERSE', 'PARTE', 'PART', 'CORO', 'CHORUS',
+    'ESTRIBILLO', 'PUENTE', 'BRIDGE', 'INTRO', 'INTERLUDIO',
+    'INTERLUDE', 'SOLO', 'OUTRO', 'FINAL', 'PRE-CORO', 'PRE-CHORUS', 'TAB', 'RIFF'
+  ]
+  return prefixes.some(p => norm.startsWith(p))
 }
 
 /**
@@ -78,6 +84,29 @@ export function parseChordPro(chordProContent: string): ParsedSong {
     let lastIndex = 0
     let currentChord: string | undefined = undefined
 
+    const pushSegment = (chord: string | undefined, text: string) => {
+      if (chord) {
+        // If text starts with spaces and has subsequent non-space characters (e.g. " para ti"):
+        // The chord is placed above the space, and the following word is a separate lyric segment.
+        const leadingSpaceMatch = text.match(/^(\s+)(\S.*)$/s)
+        if (leadingSpaceMatch) {
+          // 1. Chord over the whitespace
+          segments.push({
+            chord,
+            text: leadingSpaceMatch[1]
+          })
+          // 2. Following lyrics without chord
+          segments.push({
+            chord: undefined,
+            text: leadingSpaceMatch[2]
+          })
+          return
+        }
+      }
+
+      segments.push({ chord, text })
+    }
+
     // Check if the line has chord brackets
     let match: RegExpExecArray | null
     while ((match = chordRegex.exec(rawLine)) !== null) {
@@ -86,10 +115,7 @@ export function parseChordPro(chordProContent: string): ParsedSong {
 
       // If text before chord exists, save previous segment
       if (textBefore.length > 0 || currentChord !== undefined) {
-        segments.push({
-          chord: currentChord,
-          text: textBefore
-        })
+        pushSegment(currentChord, textBefore)
         currentChord = undefined
       }
 
@@ -113,10 +139,7 @@ export function parseChordPro(chordProContent: string): ParsedSong {
     // Trailing text after the last chord
     const remainingText = rawLine.substring(lastIndex)
     if (remainingText.length > 0 || currentChord !== undefined) {
-      segments.push({
-        chord: currentChord,
-        text: remainingText
-      })
+      pushSegment(currentChord, remainingText)
     }
 
     // If no segments were parsed (e.g., line without any chords)
