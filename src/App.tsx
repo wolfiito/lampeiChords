@@ -96,28 +96,30 @@ export function App() {
   // 2. Song Viewer or Song Editor View
   return (
     <div ref={scrollRef} className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Top Navbar with back to library button and branding */}
-      <Navbar
-        songTitle={draftSong ? draftSong.title : (activeSong?.title || '')}
-        isEditing={viewMode === 'editor'}
-        onToggleEdit={() => {
-          if (draftSong) {
-            // Discard unsaved draft if toggling away
-            setDraftSong(null)
-            setViewMode(activeSong ? 'viewer' : 'library')
-          } else {
-            setViewMode(m => (m === 'editor' ? 'viewer' : 'editor'))
-          }
-        }}
-        onOpenLibrary={() => setIsLibraryOpen(true)}
-        onOpenPrint={() => setIsPrintRequested(true)}
-        onBackToLibrary={() => {
-          if (draftSong) {
-            setDraftSong(null)
-          }
-          setViewMode('library')
-        }}
-      />
+      {/* Top Navbar ONLY when editing */}
+      {viewMode === 'editor' && (
+        <Navbar
+          songTitle={draftSong ? draftSong.title : (activeSong?.title || '')}
+          isEditing={true}
+          onToggleEdit={() => {
+            if (draftSong) {
+              // Discard unsaved draft if toggling away
+              setDraftSong(null)
+              setViewMode(activeSong ? 'viewer' : 'library')
+            } else {
+              setViewMode('viewer')
+            }
+          }}
+          onOpenLibrary={() => setIsLibraryOpen(true)}
+          onOpenPrint={() => setIsPrintRequested(true)}
+          onBackToLibrary={() => {
+            if (draftSong) {
+              setDraftSong(null)
+            }
+            setViewMode('library')
+          }}
+        />
+      )}
 
       {/* Main Content Area: Editor or Viewer */}
       <main className="flex-1">
@@ -157,6 +159,7 @@ export function App() {
               setActiveSectionIndex(-1)
               setViewMode('library')
             }}
+            onOpenLibrary={() => setIsLibraryOpen(true)}
             activeSectionIndex={activeSectionIndex}
           />
         ) : null}
