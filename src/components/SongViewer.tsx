@@ -644,9 +644,9 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           numColumns === 2 ? 'max-w-5xl' : 'max-w-2xl'
         }`}
       >
-        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-4 sm:p-7 shadow-2xl backdrop-blur-xs">
+        <div className="w-full">
           {/* Song Title & Metadata Banner */}
-          <div className="mb-5 pb-3 border-b border-zinc-800/80 flex items-center justify-between gap-3">
+          <div className="mb-5 pb-3 border-b border-zinc-800/60 flex items-center justify-between gap-3">
             <div>
               <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 {parsed.title || song.title}
