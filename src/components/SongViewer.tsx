@@ -17,7 +17,7 @@ import {
   Sliders,
   BookOpen
 } from 'lucide-react'
-import type { Song, NotationSystem, ParsedLine } from '../types/song'
+import type { Song, NotationSystem, ParsedLine, ChordSegment } from '../types/song'
 import { parseChordPro } from '../music/chordPro'
 import { calculateSongTiming, type SectionTiming } from '../music/songTiming'
 import {
@@ -327,6 +327,61 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     }
   }, [sectionBlocks, numColumns])
 
+  // Splits trailing lyrics into individual words so long lines wrap smoothly at natural word boundaries
+  const splitSegmentsIntoWords = (segments: ChordSegment[]): ChordSegment[] => {
+    const result: ChordSegment[] = []
+
+    for (const seg of segments) {
+      const rawText = seg.text || ''
+
+      // If there is no chord, split text into individual words with their trailing whitespace
+      if (!seg.chord) {
+        const words = rawText.match(/\S+\s*|\s+/g)
+        if (words && words.length > 0) {
+          for (const w of words) {
+            result.push({ chord: undefined, text: w })
+          }
+        } else if (rawText) {
+          result.push(seg)
+        }
+        continue
+      }
+
+      // If there is a chord:
+      // Case 1: Text starts with leading spaces (e.g. chord placed over whitespace)
+      const leadingSpaceMatch = rawText.match(/^(\s+)(.*)$/s)
+      if (leadingSpaceMatch) {
+        result.push({ chord: seg.chord, text: leadingSpaceMatch[1] })
+        const rest = leadingSpaceMatch[2]
+        if (rest) {
+          const words = rest.match(/\S+\s*|\s+/g)
+          if (words) {
+            for (const w of words) {
+              result.push({ chord: undefined, text: w })
+            }
+          }
+        }
+        continue
+      }
+
+      // Case 2: Chord is over the first word (or syllable)
+      const firstWordMatch = rawText.match(/^(\S+\s*)(.*)$/s)
+      if (firstWordMatch && firstWordMatch[2]) {
+        result.push({ chord: seg.chord, text: firstWordMatch[1] })
+        const restWords = firstWordMatch[2].match(/\S+\s*|\s+/g)
+        if (restWords) {
+          for (const w of restWords) {
+            result.push({ chord: undefined, text: w })
+          }
+        }
+      } else {
+        result.push(seg)
+      }
+    }
+
+    return result
+  }
+
   // Render a section block with its header and lines
   const renderSectionBlock = (block: SectionBlock, bIdx: number) => {
     const sIdx = block.sectionIndex
@@ -439,15 +494,17 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           const hasAnyChords = line.segments?.some(s => !!s.chord)
           const hasLyrics = line.segments?.some(s => (s.text || '').trim().length > 0)
           const isChordOnlyLine = hasAnyChords && !hasLyrics
+          const renderedSegments = isChordOnlyLine ? (line.segments || []) : splitSegmentsIntoWords(line.segments || [])
 
           return (
             <div
               key={lIdx}
               className={`flex flex-wrap items-end my-0.5 sm:my-1 font-mono tracking-wide max-w-full ${
-                isChordOnlyLine ? 'gap-3 sm:gap-4 py-0.5' : ''
+                isChordOnlyLine ? 'gap-3 sm:gap-4 py-0.5' : 'pl-5 sm:pl-6'
               }`}
             >
-              {line.segments?.map((seg, sSubIdx) => {
+              {renderedSegments.map((seg, sSubIdx) => {
+                const isFirstItem = sSubIdx === 0
                 const rawChord = seg.chord
                 let chordDisplay = ''
                 if (rawChord) {
@@ -457,7 +514,9 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 return (
                   <span
                     key={sSubIdx}
-                    className="inline-flex flex-col items-start mr-0 leading-none whitespace-pre-wrap break-words relative group"
+                    className={`inline-flex flex-col items-start mr-0 leading-none whitespace-pre relative group ${
+                      !isChordOnlyLine && isFirstItem ? '-ml-5 sm:-ml-6' : ''
+                    }`}
                   >
                     {chordDisplay ? (
                       <button
