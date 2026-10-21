@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
   RotateCcw,
   ZoomIn,
@@ -55,6 +55,219 @@ interface SectionBlock {
   timing?: SectionTiming
 }
 
+// Splits trailing lyrics into individual words so long lines wrap smoothly at natural word boundaries
+export const splitSegmentsIntoWords = (segments: ChordSegment[]): ChordSegment[] => {
+  const result: ChordSegment[] = []
+
+  for (const seg of segments) {
+    const rawText = seg.text || ''
+
+    // If there is no chord, split text into individual words with their trailing whitespace
+    if (!seg.chord) {
+      if (!rawText) continue
+      const words = rawText.match(/\S+\s*|\s+/g)
+      if (words && words.length > 0) {
+        for (const w of words) {
+          result.push({ chord: undefined, text: w })
+        }
+      } else {
+        result.push(seg)
+      }
+      continue
+    }
+
+    // If there is a chord:
+    // Case 1: Text starts with leading spaces (e.g. chord placed over whitespace)
+    const leadingSpaceMatch = rawText.match(/^(\s+)(.*)$/s)
+    if (leadingSpaceMatch) {
+      result.push({ chord: seg.chord, text: leadingSpaceMatch[1] })
+      const rest = leadingSpaceMatch[2]
+      if (rest) {
+        const words = rest.match(/\S+\s*|\s+/g)
+        if (words) {
+          for (const w of words) {
+            result.push({ chord: undefined, text: w })
+          }
+        }
+      }
+      continue
+    }
+
+    // Case 2: Chord is over the first word (or syllable)
+    const firstWordMatch = rawText.match(/^(\S+\s*)(.*)$/s)
+    if (firstWordMatch && firstWordMatch[2]) {
+      result.push({ chord: seg.chord, text: firstWordMatch[1] })
+      const restWords = firstWordMatch[2].match(/\S+\s*|\s+/g)
+      if (restWords) {
+        for (const w of restWords) {
+          result.push({ chord: undefined, text: w })
+        }
+      }
+    } else {
+      result.push(seg)
+    }
+  }
+
+  return result
+}
+
+interface LyricLineProps {
+  line: ParsedLine
+  semitoneShift: number
+  accidental: 'flat' | 'sharp'
+  notation: NotationSystem
+  stageMode: boolean
+  fontSize: number
+  onChordClick: (chord: string) => void
+}
+
+const LyricLine: React.FC<LyricLineProps> = React.memo(({
+  line,
+  semitoneShift,
+  accidental,
+  notation,
+  stageMode,
+  fontSize,
+  onChordClick
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [wrappedIndices, setWrappedIndices] = useState<Set<number>>(new Set())
+
+  const hasAnyChords = line.segments?.some(s => !!s.chord)
+  const hasLyrics = line.segments?.some(s => (s.text || '').trim().length > 0)
+  const isChordOnlyLine = hasAnyChords && !hasLyrics
+
+  const renderedSegments = useMemo(() => {
+    return isChordOnlyLine
+      ? (line.segments || [])
+      : splitSegmentsIntoWords(line.segments || [])
+  }, [line.segments, isChordOnlyLine])
+
+  useEffect(() => {
+    if (isChordOnlyLine) {
+      setWrappedIndices(prev => (prev.size === 0 ? prev : new Set()))
+      return
+    }
+
+    const container = containerRef.current
+    if (!container) return
+
+    const updateWrapped = () => {
+      const children = container.children
+      if (!children || children.length === 0) {
+        setWrappedIndices(prev => (prev.size === 0 ? prev : new Set()))
+        return
+      }
+
+      const firstChild = children[0] as HTMLElement
+      const baseBottom = firstChild.offsetTop + firstChild.offsetHeight
+      const newWrapped = new Set<number>()
+      let lastBottom = baseBottom
+
+      for (let i = 1; i < children.length; i++) {
+        const child = children[i] as HTMLElement
+        const childBottom = child.offsetTop + child.offsetHeight
+        // If this child dropped to a subsequent row (bottom increased by > 12px)
+        if (childBottom > lastBottom + 12) {
+          newWrapped.add(i)
+          lastBottom = childBottom
+        }
+      }
+
+      setWrappedIndices(prev => {
+        if (prev.size !== newWrapped.size) return newWrapped
+        for (const idx of newWrapped) {
+          if (!prev.has(idx)) return newWrapped
+        }
+        return prev
+      })
+    }
+
+    updateWrapped()
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => {
+        updateWrapped()
+      })
+      observer.observe(container)
+      return () => observer.disconnect()
+    }
+  }, [renderedSegments, fontSize, isChordOnlyLine])
+
+  return (
+    <div
+      ref={containerRef}
+      className={`flex flex-wrap items-end my-0.5 sm:my-1 font-mono tracking-wide max-w-full ${
+        isChordOnlyLine ? 'gap-3 sm:gap-4 py-0.5' : 'pl-5 sm:pl-6'
+      }`}
+    >
+      {renderedSegments.map((seg, sSubIdx) => {
+        const isFirstItem = sSubIdx === 0
+        const isWrappedRowStart = wrappedIndices.has(sSubIdx)
+        const rawChord = seg.chord
+        let chordDisplay = ''
+        if (rawChord) {
+          chordDisplay = transposeChord(rawChord, semitoneShift, accidental === 'flat', notation)
+        }
+
+        return (
+          <span
+            key={sSubIdx}
+            className={`inline-flex flex-col items-start mr-0 leading-none whitespace-pre relative group ${
+              !isChordOnlyLine && isFirstItem ? '-ml-5 sm:-ml-6' : ''
+            }`}
+          >
+            {/* Visual Continuation Arrow ↳ for wrapped lines */}
+            {isWrappedRowStart && !isChordOnlyLine && (
+              <span
+                className={`absolute -left-5 sm:-left-6 bottom-0.5 sm:bottom-1 font-black text-xs sm:text-sm select-none pointer-events-none transition-colors ${
+                  stageMode
+                    ? 'text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]'
+                    : 'text-emerald-400'
+                }`}
+                title="Continuación de renglón"
+                aria-hidden="true"
+              >
+                ↳
+              </span>
+            )}
+
+            {chordDisplay ? (
+              <button
+                type="button"
+                onClick={() => onChordClick(chordDisplay)}
+                title={`Ver digitación de ${chordDisplay}`}
+                className={`font-sans font-black text-xs sm:text-sm px-1 py-0.5 leading-tight rounded cursor-pointer transition select-none ${
+                  stageMode
+                    ? 'text-amber-300 hover:text-amber-100 hover:bg-amber-400/20 drop-shadow-[0_0_8px_rgba(251,191,36,0.45)]'
+                    : 'text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300'
+                }`}
+              >
+                {chordDisplay}
+              </button>
+            ) : (
+              <span
+                className="font-sans text-xs sm:text-sm px-1 py-0.5 leading-tight select-none opacity-0 pointer-events-none"
+                aria-hidden="true"
+              >
+                &nbsp;
+              </span>
+            )}
+
+            <span
+              className={`font-sans whitespace-pre transition-colors ${
+                stageMode ? 'text-white font-medium' : 'text-zinc-100'
+              }`}
+            >
+              {seg.text || (chordDisplay ? ' ' : '')}
+            </span>
+          </span>
+        )
+      })}
+    </div>
+  )
+})
+
 export const SongViewer: React.FC<SongViewerProps> = ({
   song,
   onUpdateSong,
@@ -91,7 +304,23 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     }
     return 1
   })
-  const [stageMode, setStageMode] = useState<boolean>(false)
+  const [stageMode, setStageMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('chords_stage_mode') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  const handleToggleStageMode = () => {
+    setStageMode(prev => {
+      const next = !prev
+      try {
+        localStorage.setItem('chords_stage_mode', String(next))
+      } catch {}
+      return next
+    })
+  }
   const [activeChordModal, setActiveChordModal] = useState<string | null>(null)
   const [preferredInstrument, setPreferredInstrument] = useState<'guitar' | 'bass'>(() => {
     try {
@@ -327,61 +556,6 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     }
   }, [sectionBlocks, numColumns])
 
-  // Splits trailing lyrics into individual words so long lines wrap smoothly at natural word boundaries
-  const splitSegmentsIntoWords = (segments: ChordSegment[]): ChordSegment[] => {
-    const result: ChordSegment[] = []
-
-    for (const seg of segments) {
-      const rawText = seg.text || ''
-
-      // If there is no chord, split text into individual words with their trailing whitespace
-      if (!seg.chord) {
-        const words = rawText.match(/\S+\s*|\s+/g)
-        if (words && words.length > 0) {
-          for (const w of words) {
-            result.push({ chord: undefined, text: w })
-          }
-        } else if (rawText) {
-          result.push(seg)
-        }
-        continue
-      }
-
-      // If there is a chord:
-      // Case 1: Text starts with leading spaces (e.g. chord placed over whitespace)
-      const leadingSpaceMatch = rawText.match(/^(\s+)(.*)$/s)
-      if (leadingSpaceMatch) {
-        result.push({ chord: seg.chord, text: leadingSpaceMatch[1] })
-        const rest = leadingSpaceMatch[2]
-        if (rest) {
-          const words = rest.match(/\S+\s*|\s+/g)
-          if (words) {
-            for (const w of words) {
-              result.push({ chord: undefined, text: w })
-            }
-          }
-        }
-        continue
-      }
-
-      // Case 2: Chord is over the first word (or syllable)
-      const firstWordMatch = rawText.match(/^(\S+\s*)(.*)$/s)
-      if (firstWordMatch && firstWordMatch[2]) {
-        result.push({ chord: seg.chord, text: firstWordMatch[1] })
-        const restWords = firstWordMatch[2].match(/\S+\s*|\s+/g)
-        if (restWords) {
-          for (const w of restWords) {
-            result.push({ chord: undefined, text: w })
-          }
-        }
-      } else {
-        result.push(seg)
-      }
-    }
-
-    return result
-  }
-
   // Render a section block with its header and lines
   const renderSectionBlock = (block: SectionBlock, bIdx: number) => {
     const sIdx = block.sectionIndex
@@ -405,17 +579,23 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           }}
           className={`my-2 sm:my-2.5 font-bold tracking-wide text-xs sm:text-sm pl-3 sm:pl-3.5 pr-2 py-1.5 select-none transition-colors duration-200 cursor-pointer ${
             isActive
-              ? 'border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-500/[0.15] via-emerald-500/[0.04] to-transparent text-emerald-300'
+              ? stageMode
+                ? 'border-l-4 border-amber-400 bg-gradient-to-r from-amber-500/[0.22] via-amber-500/[0.06] to-transparent text-amber-300'
+                : 'border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-500/[0.15] via-emerald-500/[0.04] to-transparent text-emerald-300'
               : 'border-l-4 border-transparent text-zinc-400 hover:text-zinc-200'
           }`}
           title={`Repite ${secTiming?.parentTitle || 'sección anterior'} (clic para ver acordes)`}
         >
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="text-emerald-400 font-extrabold text-xs">⤴</span>
+              <span className={`font-extrabold text-xs ${stageMode ? 'text-amber-400' : 'text-emerald-400'}`}>⤴</span>
               <span className="uppercase font-black text-white">{block.headerLine?.comment}</span>
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                isActive ? 'text-emerald-300 bg-emerald-500/20' : 'text-zinc-500 bg-zinc-800/40'
+                isActive
+                  ? stageMode
+                    ? 'text-amber-300 bg-amber-500/20'
+                    : 'text-emerald-300 bg-emerald-500/20'
+                  : 'text-zinc-500 bg-zinc-800/40'
               }`}>
                 Repite {secTiming?.parentTitle || 'sección anterior'}
               </span>
@@ -428,7 +608,11 @@ export const SongViewer: React.FC<SongViewerProps> = ({
             </div>
             {secTiming?.durationSec ? (
               <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${
-                isActive ? 'text-emerald-300 bg-emerald-500/25' : 'text-zinc-500'
+                isActive
+                  ? stageMode
+                    ? 'text-amber-300 bg-amber-500/25'
+                    : 'text-emerald-300 bg-emerald-500/25'
+                  : 'text-zinc-500'
               }`}>
                 ⏱ {secTiming.durationSec}s
               </span>
@@ -446,7 +630,9 @@ export const SongViewer: React.FC<SongViewerProps> = ({
         data-section-index={sIdx}
         className={`my-2.5 sm:my-3 transition-colors duration-200 pl-3 sm:pl-3.5 pr-2 py-1.5 ${
           isActive
-            ? 'border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-500/[0.14] via-emerald-500/[0.04] to-transparent'
+            ? stageMode
+              ? 'border-l-4 border-amber-400 bg-gradient-to-r from-amber-500/[0.22] via-amber-500/[0.06] to-transparent'
+              : 'border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-500/[0.14] via-emerald-500/[0.04] to-transparent'
             : 'border-l-4 border-transparent'
         }`}
       >
@@ -455,12 +641,18 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
             <span className="flex items-center gap-2">
               {isActive ? (
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block shrink-0" />
+                <span className={`w-2 h-2 rounded-full animate-ping inline-block shrink-0 ${
+                  stageMode ? 'bg-amber-400' : 'bg-emerald-400'
+                }`} />
               ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 inline-block shrink-0" />
+                <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${
+                  stageMode ? 'bg-amber-500/60' : 'bg-emerald-500/60'
+                }`} />
               )}
               <span className={`uppercase font-black tracking-wide text-xs sm:text-sm ${
-                isActive ? 'text-emerald-300' : 'text-emerald-400/90'
+                isActive
+                  ? stageMode ? 'text-amber-300' : 'text-emerald-300'
+                  : stageMode ? 'text-amber-400/90' : 'text-emerald-400/90'
               }`}>
                 {block.headerLine.comment}
               </span>
@@ -475,7 +667,9 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               <span
                 className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full transition flex items-center gap-1 ${
                   isActive
-                    ? 'bg-emerald-500/25 text-emerald-300'
+                    ? stageMode
+                      ? 'bg-amber-500/25 text-amber-300'
+                      : 'bg-emerald-500/25 text-emerald-300'
                     : 'text-zinc-500'
                 }`}
               >
@@ -491,57 +685,17 @@ export const SongViewer: React.FC<SongViewerProps> = ({
             return <div key={lIdx} className="h-2.5 sm:h-3" />
           }
 
-          const hasAnyChords = line.segments?.some(s => !!s.chord)
-          const hasLyrics = line.segments?.some(s => (s.text || '').trim().length > 0)
-          const isChordOnlyLine = hasAnyChords && !hasLyrics
-          const renderedSegments = isChordOnlyLine ? (line.segments || []) : splitSegmentsIntoWords(line.segments || [])
-
           return (
-            <div
+            <LyricLine
               key={lIdx}
-              className={`flex flex-wrap items-end my-0.5 sm:my-1 font-mono tracking-wide max-w-full ${
-                isChordOnlyLine ? 'gap-3 sm:gap-4 py-0.5' : 'pl-5 sm:pl-6'
-              }`}
-            >
-              {renderedSegments.map((seg, sSubIdx) => {
-                const isFirstItem = sSubIdx === 0
-                const rawChord = seg.chord
-                let chordDisplay = ''
-                if (rawChord) {
-                  chordDisplay = transposeChord(rawChord, semitoneShift, accidental === 'flat', notation)
-                }
-
-                return (
-                  <span
-                    key={sSubIdx}
-                    className={`inline-flex flex-col items-start mr-0 leading-none whitespace-pre relative group ${
-                      !isChordOnlyLine && isFirstItem ? '-ml-5 sm:-ml-6' : ''
-                    }`}
-                  >
-                    {chordDisplay ? (
-                      <button
-                        type="button"
-                        onClick={() => setActiveChordModal(chordDisplay)}
-                        title={`Ver digitación de ${chordDisplay}`}
-                        className={`font-sans font-black text-xs sm:text-sm px-1 py-0.5 rounded cursor-pointer transition select-none ${
-                          stageMode
-                            ? 'text-lime-300 hover:bg-lime-400/20'
-                            : 'text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300'
-                        }`}
-                      >
-                        {chordDisplay}
-                      </button>
-                    ) : (
-                      <span className="h-3.5 select-none opacity-0 text-xs">.</span>
-                    )}
-
-                    <span className={`font-sans whitespace-pre ${stageMode ? 'text-emerald-50' : 'text-zinc-100'}`}>
-                      {seg.text || (chordDisplay ? ' ' : '')}
-                    </span>
-                  </span>
-                )
-              })}
-            </div>
+              line={line}
+              semitoneShift={semitoneShift}
+              accidental={accidental}
+              notation={notation}
+              stageMode={stageMode}
+              fontSize={fontSize}
+              onChordClick={setActiveChordModal}
+            />
           )
         })}
       </div>
@@ -551,13 +705,15 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   return (
     <div
       className={`w-full min-h-screen transition-colors duration-300 overflow-x-hidden ${
-        stageMode ? 'bg-[#050907] text-emerald-100' : 'bg-zinc-950 text-zinc-100'
+        stageMode ? 'bg-black text-white' : 'bg-zinc-950 text-zinc-100'
       }`}
     >
       {/* 
         SINGLE UNIFIED TOP BAR (Ultra-clean, single header row)
       */}
-      <header className="no-print sticky top-0 z-40 bg-zinc-900/95 backdrop-blur-md border-b border-zinc-800 text-zinc-100 shadow-md">
+      <header className={`no-print sticky top-0 z-40 backdrop-blur-md border-b transition-colors shadow-md ${
+        stageMode ? 'bg-black/95 border-zinc-800/80 text-white' : 'bg-zinc-900/95 border-zinc-800 text-zinc-100'
+      }`}>
         <div className="max-w-6xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: Brand Logo & Transposition Controls */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -627,6 +783,20 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Stage Mode Quick Toggle Button in Header */}
+            <button
+              onClick={handleToggleStageMode}
+              title={stageMode ? 'Desactivar Modo Escenario' : 'Activar Modo Escenario (Alto Contraste OLED)'}
+              className={`px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border select-none ${
+                stageMode
+                  ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.6)] scale-102'
+                  : 'bg-zinc-800/90 hover:bg-zinc-700 text-zinc-300 hover:text-white border-zinc-700/80'
+              }`}
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${stageMode ? 'text-black fill-black animate-pulse' : 'text-amber-400'}`} />
+              <span className="hidden sm:inline">{stageMode ? 'ESCENARIO' : 'Escenario'}</span>
+            </button>
           </div>
 
           {/* Center: Song Title on larger screens */}
@@ -707,11 +877,20 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           {/* Song Title & Metadata Banner */}
           <div className="mb-5 pb-3 border-b border-zinc-800/60 flex items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {parsed.title || song.title}
-              </h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  {parsed.title || song.title}
+                </h1>
+                {stageMode && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black tracking-wider uppercase bg-amber-400/20 text-amber-300 border border-amber-400/50 shadow-[0_0_8px_rgba(251,191,36,0.25)]">
+                    ⚡ Escenario
+                  </span>
+                )}
+              </div>
               {(parsed.artist || song.artist) && (
-                <p className="text-xs sm:text-sm text-emerald-400 font-medium mt-0.5">
+                <p className={`text-xs sm:text-sm font-medium mt-0.5 ${
+                  stageMode ? 'text-amber-400/90' : 'text-emerald-400'
+                }`}>
                   {parsed.artist || song.artist}
                 </p>
               )}
@@ -719,7 +898,11 @@ export const SongViewer: React.FC<SongViewerProps> = ({
 
             {/* Quick Badges: Key & Capo */}
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-xs font-bold px-2.5 py-1 bg-zinc-800/90 text-emerald-400 border border-zinc-700 rounded-xl">
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-xl border ${
+                stageMode
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  : 'bg-zinc-800/90 text-emerald-400 border border-zinc-700'
+              }`}>
                 {effectiveKey}
               </span>
               {localCapo > 0 && (
@@ -960,19 +1143,21 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                   Pantalla y Atril
                 </label>
                 {/* Stage Mode */}
-                <div className="flex items-center justify-between p-3 bg-zinc-950 rounded-xl border border-zinc-800">
+                <div className={`flex items-center justify-between p-3 rounded-xl border transition ${
+                  stageMode ? 'bg-amber-950/30 border-amber-500/40' : 'bg-zinc-950 border-zinc-800'
+                }`}>
                   <div>
                     <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-lime-400" />
+                      <Sparkles className={`w-3.5 h-3.5 ${stageMode ? 'text-amber-400 fill-amber-400' : 'text-zinc-400'}`} />
                       <span>Modo Escenario</span>
                     </div>
-                    <span className="text-[11px] text-zinc-400">Alto contraste verde para poca luz</span>
+                    <span className="text-[11px] text-zinc-400">Alto contraste OLED y acordes en ámbar brillante</span>
                   </div>
                   <button
-                    onClick={() => setStageMode(m => !m)}
+                    onClick={handleToggleStageMode}
                     className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition ${
                       stageMode
-                        ? 'bg-lime-400 text-zinc-950 border-lime-300 font-black'
+                        ? 'bg-amber-400 text-black border-amber-300 font-black shadow-[0_0_10px_rgba(251,191,36,0.4)]'
                         : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700'
                     }`}
                   >
@@ -1040,15 +1225,21 @@ export const SongViewer: React.FC<SongViewerProps> = ({
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="bg-zinc-900 border border-emerald-900/60 rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col items-center max-w-sm w-full text-center max-h-[92vh] overflow-y-auto scrollbar-none"
+            className={`rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col items-center max-w-sm w-full text-center max-h-[92vh] overflow-y-auto scrollbar-none border ${
+              stageMode ? 'bg-zinc-950 border-amber-500/50 shadow-amber-500/10' : 'bg-zinc-900 border-emerald-900/60'
+            }`}
           >
             {/* Header: Chord Name + Instrument Selector Tabs */}
             <div className="flex items-center justify-between w-full mb-3 pb-2 border-b border-zinc-800">
               <div className="text-left">
-                <span className="text-lg sm:text-xl font-black text-white block leading-tight">
+                <span className={`text-lg sm:text-xl font-black block leading-tight ${
+                  stageMode ? 'text-amber-300' : 'text-white'
+                }`}>
                   {activeChordModal}
                 </span>
-                <span className="text-[11px] text-emerald-400 font-semibold">
+                <span className={`text-[11px] font-semibold ${
+                  stageMode ? 'text-amber-400' : 'text-emerald-400'
+                }`}>
                   {preferredInstrument === 'guitar' ? 'Guitarra (6 cuerdas)' : 'Bajo Eléctrico'}
                 </span>
               </div>
