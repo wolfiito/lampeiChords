@@ -187,9 +187,8 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
 
     const container = scrollContainerRef?.current
     const secTop = getElementPageY(secElem)
-    // The section block container (secElem.parentElement) wraps the header and all its lyric lines
-    const blockContainer = secElem.parentElement
-    const secHeight = blockContainer ? blockContainer.offsetHeight : Math.max(80, secElem.offsetHeight)
+    // secElem is the section block container (wraps the header and all its lyric lines)
+    const secHeight = Math.max(80, secElem.offsetHeight)
     const secBottom = secTop + secHeight
 
     const viewportHeight = container?.clientHeight || window.innerHeight || 800

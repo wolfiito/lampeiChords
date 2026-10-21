@@ -336,78 +336,94 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     const isTargetOfActive = sIdx >= 0 && currentActiveSec?.targetSectionIndex === sIdx
     const isActive = isCurrentSec || isTargetOfActive
 
+    if (block.isRepeat) {
+      /* Repeat Section Banner (e.g. [Coro] repeating previous chorus) */
+      return (
+        <div
+          key={`sec-block-${bIdx}-${sIdx}`}
+          id={`song-section-${sIdx}`}
+          data-section-index={sIdx}
+          onClick={() => {
+            const targetIdx = secTiming?.targetSectionIndex ?? sIdx
+            const elem = document.getElementById(`song-section-${targetIdx}`)
+            if (elem) elem.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }}
+          className={`my-3 sm:my-3.5 font-bold tracking-wide text-xs sm:text-sm pl-3.5 pr-3 py-2 sm:py-2.5 select-none transition-all duration-300 rounded-2xl cursor-pointer ${
+            isActive
+              ? 'border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-500/20 via-emerald-500/10 to-transparent text-emerald-300 ring-1 ring-emerald-500/40 shadow-[0_0_25px_rgba(16,185,129,0.25)]'
+              : 'border-l-4 border-emerald-500/50 bg-zinc-900/70 hover:bg-zinc-800/80 text-zinc-300 hover:border-emerald-400'
+          }`}
+          title={`Repite ${secTiming?.parentTitle || 'sección anterior'} (clic para ver acordes)`}
+        >
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-400 font-extrabold text-xs">⤴</span>
+              <span className="uppercase font-black text-white">{block.headerLine?.comment}</span>
+              <span className="text-[10px] text-emerald-300 font-semibold bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                Repite {secTiming?.parentTitle || 'sección anterior'}
+              </span>
+              {isCurrentSec && (
+                <span className="text-[10px] text-amber-300 font-bold animate-pulse flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                  En pantalla arriba ↑
+                </span>
+              )}
+            </div>
+            {secTiming?.durationSec ? (
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full border bg-zinc-800/90 text-zinc-300 border-zinc-700">
+                ⏱ {secTiming.durationSec}s
+              </span>
+            ) : null}
+          </div>
+        </div>
+      )
+    }
+
+    /* Regular Section Block: The lateral border now covers the ENTIRE block (Header + Lines) */
     return (
-      <div key={`sec-block-${bIdx}-${sIdx}`} className="space-y-1">
+      <div
+        key={`sec-block-${bIdx}-${sIdx}`}
+        id={`song-section-${sIdx}`}
+        data-section-index={sIdx}
+        className={`my-3 sm:my-4 transition-all duration-300 ease-out rounded-r-2xl ${
+          isActive
+            ? 'border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-500/[0.14] via-emerald-500/[0.04] to-transparent shadow-[0_0_25px_rgba(16,185,129,0.18)] ring-1 ring-emerald-500/30 pl-3.5 sm:pl-4 pr-2 sm:pr-3 py-2 sm:py-2.5'
+            : 'border-l-2 border-zinc-800/80 hover:border-zinc-700/80 pl-3.5 sm:pl-4 pr-2 sm:pr-3 py-1.5'
+        }`}
+      >
         {/* Section Header */}
         {block.headerLine && (
-          block.isRepeat ? (
-            /* Repeat Section Banner (e.g. [Coro] repeating previous chorus) */
-            <div
-              id={`song-section-${sIdx}`}
-              data-section-index={sIdx}
-              onClick={() => {
-                const targetIdx = secTiming?.targetSectionIndex ?? sIdx
-                const elem = document.getElementById(`song-section-${targetIdx}`)
-                if (elem) elem.scrollIntoView({ behavior: 'smooth', block: 'center' })
-              }}
-              className={`mt-4 mb-2 font-bold tracking-wide text-xs sm:text-sm pl-2.5 select-none transition-all duration-300 rounded-xl cursor-pointer ${
-                isActive
-                  ? 'border-l-4 border-emerald-400 bg-emerald-500/15 py-2 pr-3 text-emerald-300 ring-1 ring-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.25)]'
-                  : 'border-l-4 border-emerald-500/50 bg-zinc-900/70 hover:bg-zinc-800/80 py-1.5 pr-2.5 text-zinc-300'
-              }`}
-              title={`Repite ${secTiming?.parentTitle || 'sección anterior'} (clic para ver acordes)`}
-            >
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <span className="text-emerald-400 font-extrabold text-xs">⤴</span>
-                  <span className="uppercase font-black text-white">{block.headerLine.comment}</span>
-                  <span className="text-[10px] text-emerald-300 font-semibold bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                    Repite {secTiming?.parentTitle || 'sección anterior'}
-                  </span>
-                  {isCurrentSec && (
-                    <span className="text-[10px] text-amber-300 font-bold animate-pulse flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-                      En pantalla arriba ↑
-                    </span>
-                  )}
-                </div>
-                {secTiming?.durationSec ? (
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full border bg-zinc-800/90 text-zinc-300 border-zinc-700">
-                    ⏱ {secTiming.durationSec}s
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          ) : (
-            /* Regular Section Header */
-            <div
-              id={`song-section-${sIdx}`}
-              data-section-index={sIdx}
-              className={`mt-5 mb-2 font-bold tracking-wide uppercase text-xs sm:text-sm pl-2.5 select-none transition-all duration-300 ${
-                isActive
-                  ? 'border-l-4 border-emerald-400 bg-emerald-500/15 py-1.5 pr-3 rounded-r-xl text-emerald-300 font-black shadow-[0_0_20px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500/30'
-                  : 'border-l-4 border-emerald-400 text-emerald-400'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="flex items-center gap-2">
-                  {isActive && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />}
-                  <span>{block.headerLine.comment}</span>
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-2 pb-1 border-b border-zinc-800/60">
+            <span className="flex items-center gap-2">
+              {isActive ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block shrink-0" />
+              ) : (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 inline-block shrink-0" />
+              )}
+              <span className={`uppercase font-black tracking-wide text-xs sm:text-sm ${
+                isActive ? 'text-emerald-300' : 'text-emerald-400'
+              }`}>
+                {block.headerLine.comment}
+              </span>
+              {isTargetOfActive && !isCurrentSec && (
+                <span className="text-[10px] text-amber-300 font-bold animate-pulse flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                  Repitiendo arriba
                 </span>
-                {secTiming?.durationSec ? (
-                  <span
-                    className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full border transition flex items-center gap-1 ${
-                      isActive
-                        ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400/60 shadow-sm'
-                        : 'bg-zinc-800/80 text-zinc-400 border-zinc-700/80'
-                    }`}
-                  >
-                    ⏱ {secTiming.durationSec}s
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          )
+              )}
+            </span>
+            {secTiming?.durationSec ? (
+              <span
+                className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full border transition flex items-center gap-1 ${
+                  isActive
+                    ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400/60 shadow-xs'
+                    : 'bg-zinc-800/80 text-zinc-400 border-zinc-700/80'
+                }`}
+              >
+                ⏱ {secTiming.durationSec}s
+              </span>
+            ) : null}
+          </div>
         )}
 
         {/* Lines inside this section */}
