@@ -46,7 +46,7 @@ export const ThemeDropdown: React.FC<ThemeDropdownProps> = ({
         type="button"
         onClick={() => setIsOpen(o => !o)}
         title="Cambiar tema de color de la aplicación"
-        className="flex items-center gap-1.5 bg-zinc-900/90 hover:bg-zinc-800 p-2 sm:px-3 sm:py-2 rounded-xl border border-zinc-800 text-xs font-bold text-zinc-300 hover:text-white transition cursor-pointer select-none active:scale-95 shadow-sm shrink-0"
+        className="flex items-center gap-1.5 bg-zinc-900/90 hover:bg-zinc-800 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border border-zinc-800 text-xs font-bold text-zinc-300 hover:text-white transition cursor-pointer select-none active:scale-95 shadow-sm"
       >
         <span className={`w-3.5 h-3.5 rounded-full shrink-0 ${themeConfig.dotClass} ${themeConfig.ringClass}`} />
         {showLabel && (
@@ -54,7 +54,7 @@ export const ThemeDropdown: React.FC<ThemeDropdownProps> = ({
             {themeConfig.label}
           </span>
         )}
-        <ChevronDown className="w-3.5 h-3.5 text-zinc-400 hidden sm:inline" />
+        <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
       </button>
 
       {isOpen && (

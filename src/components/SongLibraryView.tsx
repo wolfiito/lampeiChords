@@ -8,8 +8,7 @@ import {
   Download,
   Play,
   Edit3,
-  Tag,
-  Radio
+  Tag
 } from 'lucide-react'
 import type { Song } from '../types/song'
 import { useTheme } from '../context/ThemeContext'
@@ -24,7 +23,6 @@ interface SongLibraryViewProps {
   onDeleteSong: (id: string) => void
   onOpenImportModal?: () => void
   onExportLibrary: () => void
-  onOpenTuner?: () => void
 }
 
 export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
@@ -34,8 +32,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
   onEditSong,
   onDuplicateSong,
   onDeleteSong,
-  onExportLibrary,
-  onOpenTuner
+  onExportLibrary
 }) => {
   const { themeConfig } = useTheme()
   const [searchTerm, setSearchTerm] = useState('')
@@ -64,41 +61,20 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans pb-16">
       {/* Top Hero / Header */}
       <header className="border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-2.5 sm:px-6 h-14 sm:h-20 flex items-center justify-between gap-1.5 sm:gap-3 flex-nowrap">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-20 flex items-center justify-between gap-2 sm:gap-3">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
             <img
               src="/logo.png"
               alt="Logo Lampei"
               className="h-8 sm:h-11 w-auto object-contain shrink-0 drop-shadow-[0_2px_12px_rgba(16,185,129,0.4)] transition-transform hover:scale-105"
             />
             <div className="min-w-0">
-              <span className="font-black text-sm sm:text-xl tracking-tight text-white block leading-tight truncate">
+              <span className="font-black text-base sm:text-xl tracking-tight text-white block leading-tight truncate">
                 chords<span className={`transition-colors ${themeConfig.primaryText}`}>Lampei</span>
               </span>
               <span className="text-[10px] sm:text-[11px] text-zinc-400 font-medium hidden sm:inline">Repertorio Digital & Cifrados</span>
             </div>
-          </div>
-
-          {/* Module Navigation Tabs (Canciones vs Afinador) */}
-          <div className="flex items-center bg-zinc-950 p-0.5 sm:p-1 rounded-xl sm:rounded-2xl border border-zinc-800 shrink-0 gap-0.5 sm:gap-1">
-            <button
-              type="button"
-              className={`p-1.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${themeConfig.primaryBg} text-white shadow`}
-              title="Catálogo de Canciones"
-            >
-              <Music className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Canciones</span>
-            </button>
-            <button
-              type="button"
-              onClick={onOpenTuner}
-              className="p-1.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition flex items-center gap-1.5 cursor-pointer"
-              title="Abrir Afinador de Guitarra y Bajo"
-            >
-              <Radio className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Afinador</span>
-            </button>
           </div>
 
           {/* Action Buttons: Theme Selector + Nueva Canción */}
@@ -107,12 +83,12 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
 
             <button
               onClick={onNewSong}
-              className={`p-2 sm:px-3.5 sm:py-2 ${themeConfig.primaryButton} text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0`}
+              className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 ${themeConfig.primaryButton} text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1 sm:gap-1.5 cursor-pointer active:scale-95 shrink-0`}
               title="Crear una nueva canción"
-              aria-label="Nueva Canción"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Nueva Canción</span>
+              <span className="sm:hidden">Nueva</span>
             </button>
           </div>
         </div>
