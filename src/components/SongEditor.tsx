@@ -3,6 +3,7 @@ import { Save, ArrowLeft, Wand2, Eye, EyeOff } from 'lucide-react'
 import type { Song } from '../types/song'
 import { convertTraditionalToChordPro } from '../music/chordConverter'
 import { parseChordPro } from '../music/chordPro'
+import { useTheme } from '../context/ThemeContext'
 
 interface SongEditorProps {
   song: Song
@@ -11,6 +12,7 @@ interface SongEditorProps {
 }
 
 export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }) => {
+  const { themeConfig } = useTheme()
   const [title, setTitle] = useState(song.title)
   const [artist, setArtist] = useState(song.artist)
   const [originalKey, setOriginalKey] = useState(song.originalKey)
@@ -75,15 +77,15 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
           <button
             onClick={handleConvertTraditional}
             title="Convierte canciones pegadas con acordes arriba y letra abajo a formato estándar"
-            className="px-2.5 sm:px-3.5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+            className={`px-2.5 sm:px-3.5 py-1.5 ${themeConfig.primaryBadge} text-xs font-bold rounded-xl transition flex items-center gap-1.5`}
           >
-            <Wand2 className="w-3.5 h-3.5 text-emerald-400" />
+            <Wand2 className={`w-3.5 h-3.5 ${themeConfig.primaryText}`} />
             <span>Auto-formato</span>
           </button>
 
           <button
             onClick={handleSave}
-            className="px-4 sm:px-5 py-1.5 sm:py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center gap-1.5"
+            className={`px-4 sm:px-5 py-1.5 sm:py-2 ${themeConfig.primaryButton} font-bold text-xs rounded-xl transition flex items-center gap-1.5`}
           >
             <Save className="w-4 h-4" />
             <span>Guardar</span>
@@ -99,7 +101,7 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-zinc-500"
           />
         </div>
 
@@ -109,7 +111,7 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
             type="text"
             value={artist}
             onChange={e => setArtist(e.target.value)}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-zinc-500"
           />
         </div>
 
@@ -119,7 +121,7 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
             type="text"
             value={originalKey}
             onChange={e => setOriginalKey(e.target.value)}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5 text-sm text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
+            className={`w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5 text-sm ${themeConfig.primaryText} font-bold focus:outline-none focus:border-zinc-500`}
           />
         </div>
 
@@ -188,7 +190,7 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
                 if (line.type === 'empty') return <div key={idx} className="h-3 sm:h-4" />
                 if (line.type === 'comment') {
                   return (
-                    <div key={idx} className="font-bold text-xs uppercase text-emerald-400 my-1.5 flex items-center justify-between">
+                    <div key={idx} className={`font-bold text-xs uppercase ${themeConfig.primaryText} my-1.5 flex items-center justify-between`}>
                       <span>{line.comment}</span>
                       {line.sectionDuration && (
                         <span className="text-[10px] bg-zinc-800 text-zinc-300 font-mono font-bold px-2 py-0.5 rounded-full border border-zinc-700">
@@ -203,7 +205,7 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
                     {line.segments?.map((seg, sIdx) => (
                       <span key={sIdx} className="inline-flex flex-col items-start leading-none mr-0">
                         {seg.chord ? (
-                          <span className="text-emerald-400 font-black text-[11px] sm:text-xs">{seg.chord}</span>
+                          <span className={`${themeConfig.chordClass} font-black text-[11px] sm:text-xs`}>{seg.chord}</span>
                         ) : (
                           <span className="h-3 select-none opacity-0">.</span>
                         )}

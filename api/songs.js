@@ -137,12 +137,33 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      const id = req.query?.id || (req.body && req.body.id);
+      let id = req.query?.id;
+
+      if (!id && req.url) {
+        try {
+          const url = new URL(req.url, 'http://localhost');
+          id = url.searchParams.get('id');
+        } catch {}
+      }
+
+      if (!id && req.body) {
+        try {
+          const parsed = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+          id = parsed?.id;
+        } catch {}
+      }
+
       if (!id) {
         return res.status(400).json({ error: 'Falta id de canción' });
       }
 
-      await sql`DELETE FROM chords_songs WHERE id = ${id}`;
+      // Delete by exact id or decoded id
+      const decodedId = decodeURIComponent(id);
+      await sql`
+        DELETE FROM chords_songs 
+        WHERE id = ${id} OR id = ${decodedId}
+      `;
+
       return res.status(200).json({ success: true, deletedId: id });
     }
 

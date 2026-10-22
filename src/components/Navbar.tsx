@@ -8,6 +8,7 @@ import {
   Maximize,
   Minimize
 } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -31,6 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPrint,
   onBackToLibrary
 }) => {
+  const { themeConfig } = useTheme()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstallable, setIsInstallable] = useState(false)
@@ -97,7 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="p-1.5 sm:p-2 bg-zinc-800/80 hover:bg-zinc-800 text-zinc-200 rounded-xl border border-zinc-700 transition flex items-center gap-1.5"
                 title="Abrir canciones"
               >
-                <Menu className="w-5 h-5 text-emerald-400" />
+                <Menu className={`w-5 h-5 ${themeConfig.primaryText}`} />
                 <span className="hidden md:inline text-xs font-bold">Canciones</span>
               </button>
 
@@ -108,7 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="h-8 sm:h-9 w-auto object-contain shrink-0 drop-shadow-[0_2px_10px_rgba(16,185,129,0.4)] transition-transform hover:scale-105"
                 />
                 <span className="font-black text-base sm:text-lg tracking-tight text-white whitespace-nowrap">
-                  chords<span className="text-emerald-400">Lampei</span>
+                  chords<span className={themeConfig.primaryText}>Lampei</span>
                 </span>
               </div>
             </>
@@ -119,7 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="hidden lg:flex items-center gap-2 max-w-xs truncate text-center">
           <span className="text-xs text-zinc-400 truncate">
             {isEditing ? 'Editando:' : 'Tocando:'}{' '}
-            <strong className="text-emerald-300 font-bold">{songTitle}</strong>
+            <strong className={`${themeConfig.primaryText} font-bold`}>{songTitle}</strong>
           </span>
         </div>
 
@@ -129,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {isInstallable && (
             <button
               onClick={handleInstallClick}
-              className="px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1 animate-pulse"
+              className={`px-2.5 sm:px-3 py-1.5 ${themeConfig.primaryButton} font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1 animate-pulse`}
               title="Instalar como App en tu dispositivo"
             >
               <Download className="w-3.5 h-3.5" />
@@ -141,9 +143,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onOpenPrint}
             title="Exportar canción a PDF (1 sola página)"
-            className="px-2.5 sm:px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 hover:text-white text-emerald-300 border border-emerald-500/40 font-bold text-xs rounded-xl transition flex items-center gap-1.5"
+            className={`px-2.5 sm:px-3 py-1.5 ${themeConfig.primaryBadge} font-bold text-xs rounded-xl transition flex items-center gap-1.5`}
           >
-            <FileDown className="w-4 h-4 text-emerald-400" />
+            <FileDown className={`w-4 h-4 ${themeConfig.primaryText}`} />
             <span className="hidden sm:inline">Guardar PDF</span>
           </button>
 
@@ -153,7 +155,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
               isEditing
                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-600/20'
+                : themeConfig.primaryButton
             }`}
           >
             {isEditing ? (

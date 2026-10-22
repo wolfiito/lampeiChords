@@ -95,7 +95,7 @@ export function App() {
 
   // 2. Song Viewer or Song Editor View
   return (
-    <div ref={scrollRef} className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+    <div ref={scrollRef} className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans">
       {/* Top Navbar ONLY when editing */}
       {viewMode === 'editor' && (
         <Navbar

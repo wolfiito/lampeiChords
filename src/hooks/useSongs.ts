@@ -4,6 +4,7 @@ import { DEFAULT_SONGS } from '../data/defaultSongs'
 
 const STORAGE_KEY = 'acordes_pro_songs_v1'
 const ACTIVE_SONG_KEY = 'acordes_pro_active_song_id'
+const DELETED_SONGS_KEY = 'chords_deleted_song_ids_v1'
 
 const LEGACY_DEMO_IDS = new Set([
   'soda-stereo-de-musica-ligera',
@@ -18,10 +19,13 @@ export function useSongs() {
   const [songs, setSongs] = useState<Song[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
+      const storedDeleted = localStorage.getItem(DELETED_SONGS_KEY)
+      const deletedIds = new Set<string>(storedDeleted ? JSON.parse(storedDeleted) : [])
+
       if (stored) {
         const parsed = JSON.parse(stored)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = parsed.filter(s => !LEGACY_DEMO_IDS.has(s.id))
+          const cleaned = parsed.filter(s => !LEGACY_DEMO_IDS.has(s.id) && !deletedIds.has(s.id))
           if (cleaned.length > 0) {
             return cleaned
           }
@@ -74,8 +78,27 @@ export function useSongs() {
       const data = await res.json()
 
       if (data.success && Array.isArray(data.songs)) {
+        let deletedIds = new Set<string>()
+        try {
+          const storedDeleted = localStorage.getItem(DELETED_SONGS_KEY)
+          if (storedDeleted) {
+            deletedIds = new Set(JSON.parse(storedDeleted))
+          }
+        } catch {}
+
+        // Purge any resurrected deleted songs from the cloud in the background
+        data.songs.forEach((s: Song) => {
+          if (deletedIds.has(s.id)) {
+            fetch(`/api/songs?id=${encodeURIComponent(s.id)}`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: s.id })
+            }).catch(() => {})
+          }
+        })
+
         const cloudSongs: Song[] = data.songs.filter(
-          (s: Song) => !LEGACY_DEMO_IDS.has(s.id)
+          (s: Song) => !LEGACY_DEMO_IDS.has(s.id) && !deletedIds.has(s.id)
         )
 
         if (cloudSongs.length > 0) {
@@ -205,6 +228,16 @@ export function useSongs() {
 
   const saveSong = (songData: Partial<Song> & { id?: string }) => {
     const now = Date.now()
+    if (songData.id) {
+      try {
+        const stored = localStorage.getItem(DELETED_SONGS_KEY)
+        if (stored) {
+          const list = JSON.parse(stored).filter((id: string) => id !== songData.id)
+          localStorage.setItem(DELETED_SONGS_KEY, JSON.stringify(list))
+        }
+      } catch {}
+    }
+
     if (songData.id && songs.some(s => s.id === songData.id)) {
       // Update existing
       let updatedSong: Song | null = null
@@ -249,6 +282,17 @@ export function useSongs() {
   }
 
   const deleteSong = (id: string) => {
+    // 1. Immediately record in persistent deleted tombstones
+    try {
+      const stored = localStorage.getItem(DELETED_SONGS_KEY)
+      const list = stored ? JSON.parse(stored) : []
+      if (!list.includes(id)) {
+        list.push(id)
+        localStorage.setItem(DELETED_SONGS_KEY, JSON.stringify(list))
+      }
+    } catch {}
+
+    // 2. Remove from active state immediately
     setSongs(prev => {
       const filtered = prev.filter(s => s.id !== id)
       if (activeSongId === id && filtered.length > 0) {
@@ -257,13 +301,22 @@ export function useSongs() {
       return filtered
     })
 
-    // Delete in cloud
-    fetch(`/api/songs?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
-      .then(() => {
+    // 3. Delete in cloud (robust payload: both query and JSON body)
+    fetch(`/api/songs?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    })
+      .then(res => {
+        if (!res.ok) {
+          console.warn('DELETE returned non-200 status:', res.status)
+        }
         lastCloudCountRef.current = Math.max(0, lastCloudCountRef.current - 1)
         notifyBroadcast()
       })
-      .catch(() => {})
+      .catch(err => {
+        console.warn('Network error deleting song from cloud:', err)
+      })
   }
 
   const duplicateSong = (id: string) => {

@@ -11,6 +11,8 @@ import {
   Tag
 } from 'lucide-react'
 import type { Song } from '../types/song'
+import { useTheme } from '../context/ThemeContext'
+import { ThemeDropdown } from './ThemeDropdown'
 
 interface SongLibraryViewProps {
   songs: Song[]
@@ -32,6 +34,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
   onDeleteSong,
   onExportLibrary
 }) => {
+  const { themeConfig } = useTheme()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
 
@@ -68,17 +71,19 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
             />
             <div>
               <span className="font-black text-lg sm:text-xl tracking-tight text-white block leading-tight">
-                chords<span className="text-emerald-400">Lampei</span>
+                chords<span className={`transition-colors ${themeConfig.primaryText}`}>Lampei</span>
               </span>
               <span className="text-[11px] text-zinc-400 font-medium hidden sm:inline">Repertorio Digital & Cifrados</span>
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons: Theme Selector + Nueva Canción */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <ThemeDropdown />
+
             <button
               onClick={onNewSong}
-              className="px-3.5 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center gap-1.5"
+              className={`px-3.5 sm:px-4 py-2 ${themeConfig.primaryButton} text-xs sm:text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-1.5 cursor-pointer active:scale-95`}
               title="Crear una nueva canción"
             >
               <Plus className="w-4 h-4" />
@@ -95,7 +100,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
               <span>Canciones</span>
-              <span className="text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              <span className={`text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border transition-colors ${themeConfig.primaryBadge}`}>
                 {songs.length} {songs.length === 1 ? 'canción' : 'canciones'}
               </span>
             </h1>
@@ -112,7 +117,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
               placeholder="Buscar por título, artista o tono (ej. G, C, Alabanza)..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-zinc-950/80 text-sm sm:text-base text-zinc-100 placeholder-zinc-500 pl-10 sm:pl-11 pr-4 py-2.5 rounded-xl border border-zinc-700/80 focus:outline-none focus:border-emerald-500 transition"
+              className="w-full bg-zinc-950/80 text-sm sm:text-base text-zinc-100 placeholder-zinc-500 pl-10 sm:pl-11 pr-4 py-2.5 rounded-xl border border-zinc-700/80 focus:outline-none focus:border-zinc-500 transition"
             />
             {searchTerm && (
               <button
@@ -128,13 +133,13 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
           {allTags.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1">
               <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1 mr-1 shrink-0">
-                <Tag className="w-3.5 h-3.5 text-emerald-400" /> Filtros:
+                <Tag className={`w-3.5 h-3.5 ${themeConfig.primaryText}`} /> Filtros:
               </span>
               <button
                 onClick={() => setSelectedTag(null)}
-                className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+                className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
                   selectedTag === null
-                    ? 'bg-emerald-500 text-zinc-950 shadow-sm'
+                    ? `${themeConfig.primaryButton} shadow-sm`
                     : 'bg-zinc-800 text-zinc-400 hover:text-white'
                 }`}
               >
@@ -142,17 +147,18 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
               </button>
               {allTags.map(tag => {
                 const count = songs.filter(s => s.tags?.includes(tag)).length
+                const isSelected = selectedTag === tag
                 return (
                   <button
                     key={tag}
-                    onClick={() => setSelectedTag(t => (t === tag ? null : tag))}
-                    className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
-                      selectedTag === tag
-                        ? 'bg-emerald-500 text-zinc-950 font-bold shadow-sm'
-                        : 'bg-zinc-800/90 text-zinc-400 hover:text-white hover:bg-zinc-700'
+                    onClick={() => setSelectedTag(isSelected ? null : tag)}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
+                      isSelected
+                        ? `${themeConfig.primaryButton} shadow-sm`
+                        : 'bg-zinc-800 text-zinc-400 hover:text-white'
                     }`}
                   >
-                    {tag} ({count})
+                    #{tag} ({count})
                   </button>
                 )
               })}
@@ -211,10 +217,10 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                   <div>
                     {/* Header: Title and Tonalidad badge */}
                     <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <h3 className="font-extrabold text-base sm:text-lg text-white group-hover:text-emerald-300 transition-colors line-clamp-1">
+                      <h3 className={`font-extrabold text-base sm:text-lg text-white transition-colors line-clamp-1`}>
                         {song.title}
                       </h3>
-                      <span className="shrink-0 text-xs font-black px-2.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                      <span className={`shrink-0 text-xs font-black px-2.5 py-0.5 rounded-lg border transition-colors ${themeConfig.primaryBadge}`}>
                         {displayKey}
                       </span>
                     </div>
@@ -256,7 +262,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                         e.stopPropagation()
                         onSelectSong(song.id)
                       }}
-                      className="flex-1 py-1.5 px-3 bg-emerald-600/15 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-emerald-500/30"
+                      className={`flex-1 py-1.5 px-3 ${themeConfig.cardButton} rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer active:scale-98`}
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
                       <span>Abrir y Tocar</span>

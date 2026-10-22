@@ -113,107 +113,13 @@ export const splitSegmentsIntoWords = (segments: ChordSegment[]): ChordSegment[]
   return result
 }
 
-export type StageColor = 'pink' | 'blue' | 'orange' | 'amber' | 'green'
+import { type AppTheme, type ThemeConfig, THEMES } from '../types/theme'
+import { useTheme } from '../context/ThemeContext'
 
-export interface StageColorConfig {
-  id: StageColor
-  name: string
-  label: string
-  dotClass: string
-  ringClass: string
-  chordClass: string
-  chordHoverClass: string
-  activeBorderClass: string
-  activeBgClass: string
-  activeTextClass: string
-  arrowClass: string
-  badgeClass: string
-  borderGlowClass: string
-  pingClass: string
-}
+export type StageColor = AppTheme
+export type StageColorConfig = ThemeConfig
+export const STAGE_COLORS = THEMES
 
-export const STAGE_COLORS: Record<StageColor, StageColorConfig> = {
-  pink: {
-    id: 'pink',
-    name: 'Rosa Neón (Cyberpunk)',
-    label: 'Rosa',
-    dotClass: 'bg-pink-400',
-    ringClass: 'ring-pink-400 shadow-[0_0_10px_rgba(244,114,182,0.8)]',
-    chordClass: 'text-pink-400 font-black drop-shadow-[0_0_8px_rgba(244,114,182,0.5)]',
-    chordHoverClass: 'hover:text-pink-200 hover:bg-pink-500/20',
-    activeBorderClass: 'border-l-4 border-pink-500',
-    activeBgClass: 'bg-gradient-to-r from-pink-500/[0.22] via-pink-500/[0.06] to-transparent',
-    activeTextClass: 'text-pink-300 font-black',
-    arrowClass: 'text-pink-400 font-black drop-shadow-[0_0_6px_rgba(244,114,182,0.7)]',
-    badgeClass: 'bg-pink-500/20 text-pink-300 border-pink-500/50 shadow-[0_0_8px_rgba(244,114,182,0.3)]',
-    borderGlowClass: 'border-pink-500/50 shadow-[0_0_12px_rgba(244,114,182,0.25)]',
-    pingClass: 'bg-pink-400'
-  },
-  blue: {
-    id: 'blue',
-    name: 'Azul Cyan (Tokyo Night)',
-    label: 'Azul',
-    dotClass: 'bg-cyan-400',
-    ringClass: 'ring-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]',
-    chordClass: 'text-cyan-400 font-black drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]',
-    chordHoverClass: 'hover:text-cyan-200 hover:bg-cyan-500/20',
-    activeBorderClass: 'border-l-4 border-cyan-400',
-    activeBgClass: 'bg-gradient-to-r from-cyan-500/[0.22] via-cyan-500/[0.06] to-transparent',
-    activeTextClass: 'text-cyan-300 font-black',
-    arrowClass: 'text-cyan-400 font-black drop-shadow-[0_0_6px_rgba(34,211,238,0.7)]',
-    badgeClass: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-[0_0_8px_rgba(34,211,238,0.3)]',
-    borderGlowClass: 'border-cyan-500/50 shadow-[0_0_12px_rgba(34,211,238,0.25)]',
-    pingClass: 'bg-cyan-400'
-  },
-  orange: {
-    id: 'orange',
-    name: 'Naranja Neón (Dracula / Sunset)',
-    label: 'Naranja',
-    dotClass: 'bg-orange-400',
-    ringClass: 'ring-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.8)]',
-    chordClass: 'text-orange-400 font-black drop-shadow-[0_0_8px_rgba(251,146,60,0.5)]',
-    chordHoverClass: 'hover:text-orange-200 hover:bg-orange-500/20',
-    activeBorderClass: 'border-l-4 border-orange-400',
-    activeBgClass: 'bg-gradient-to-r from-orange-500/[0.22] via-orange-500/[0.06] to-transparent',
-    activeTextClass: 'text-orange-300 font-black',
-    arrowClass: 'text-orange-400 font-black drop-shadow-[0_0_6px_rgba(251,146,60,0.7)]',
-    badgeClass: 'bg-orange-500/20 text-orange-300 border-orange-500/50 shadow-[0_0_8px_rgba(251,146,60,0.3)]',
-    borderGlowClass: 'border-orange-500/50 shadow-[0_0_12px_rgba(251,146,60,0.25)]',
-    pingClass: 'bg-orange-400'
-  },
-  amber: {
-    id: 'amber',
-    name: 'Ámbar Oro (Clásico Escenario)',
-    label: 'Ámbar',
-    dotClass: 'bg-amber-400',
-    ringClass: 'ring-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.8)]',
-    chordClass: 'text-amber-300 font-black drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]',
-    chordHoverClass: 'hover:text-amber-100 hover:bg-amber-400/20',
-    activeBorderClass: 'border-l-4 border-amber-400',
-    activeBgClass: 'bg-gradient-to-r from-amber-500/[0.22] via-amber-500/[0.06] to-transparent',
-    activeTextClass: 'text-amber-300 font-black',
-    arrowClass: 'text-amber-400 font-black drop-shadow-[0_0_6px_rgba(251,191,36,0.7)]',
-    badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_8px_rgba(251,191,36,0.3)]',
-    borderGlowClass: 'border-amber-500/50 shadow-[0_0_12px_rgba(251,191,36,0.25)]',
-    pingClass: 'bg-amber-400'
-  },
-  green: {
-    id: 'green',
-    name: 'Verde Esmeralda (Matrix)',
-    label: 'Verde',
-    dotClass: 'bg-emerald-400',
-    ringClass: 'ring-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]',
-    chordClass: 'text-emerald-400 font-black drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]',
-    chordHoverClass: 'hover:text-emerald-200 hover:bg-emerald-500/20',
-    activeBorderClass: 'border-l-4 border-emerald-400',
-    activeBgClass: 'bg-gradient-to-r from-emerald-500/[0.22] via-emerald-500/[0.06] to-transparent',
-    activeTextClass: 'text-emerald-300 font-black',
-    arrowClass: 'text-emerald-400 font-black drop-shadow-[0_0_6px_rgba(52,211,153,0.7)]',
-    badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_8px_rgba(52,211,153,0.3)]',
-    borderGlowClass: 'border-emerald-500/50 shadow-[0_0_12px_rgba(52,211,153,0.25)]',
-    pingClass: 'bg-emerald-400'
-  }
-}
 
 interface LyricLineProps {
   line: ParsedLine
@@ -328,9 +234,7 @@ const LyricLine: React.FC<LyricLineProps> = React.memo(({
             {/* Visual Continuation Arrow ↳ for wrapped lines */}
             {isWrappedRowStart && !isChordOnlyLine && (
               <span
-                className={`absolute -left-5 sm:-left-6 bottom-0.5 sm:bottom-1 font-black text-xs sm:text-sm select-none pointer-events-none transition-colors ${
-                  stageMode ? colorConfig.arrowClass : 'text-emerald-400'
-                }`}
+                className={`absolute -left-5 sm:-left-6 bottom-0.5 sm:bottom-1 font-black text-xs sm:text-sm select-none pointer-events-none transition-colors ${colorConfig.arrowClass}`}
                 title="Continuación de renglón"
                 aria-hidden="true"
               >
@@ -343,11 +247,7 @@ const LyricLine: React.FC<LyricLineProps> = React.memo(({
                 type="button"
                 onClick={() => onChordClick(chordDisplay)}
                 title={`Ver digitación de ${chordDisplay}`}
-                className={`font-sans font-black text-xs sm:text-sm px-1 py-0.5 leading-tight rounded cursor-pointer transition select-none ${
-                  stageMode
-                    ? `${colorConfig.chordClass} ${colorConfig.chordHoverClass}`
-                    : 'text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300'
-                }`}
+                className={`font-sans font-black text-xs sm:text-sm px-1 py-0.5 leading-tight rounded cursor-pointer transition select-none ${colorConfig.chordClass} ${colorConfig.chordHoverClass}`}
               >
                 {chordDisplay}
               </button>
@@ -428,19 +328,12 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     })
   }
 
-  const [stageColor, setStageColor] = useState<StageColor>(() => {
-    try {
-      const saved = localStorage.getItem('chords_stage_color') as StageColor
-      if (saved && STAGE_COLORS[saved]) return saved
-    } catch {}
-    return 'pink'
-  })
+  const { theme, setTheme, themeConfig } = useTheme()
+  const stageColor = theme
+  const colorConfig = themeConfig
 
   const handleSelectStageColor = (color: StageColor) => {
-    setStageColor(color)
-    try {
-      localStorage.setItem('chords_stage_color', color)
-    } catch {}
+    setTheme(color)
   }
 
   const [scrollState, setScrollState] = useState<{
@@ -798,31 +691,25 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           }}
           className={`my-2 sm:my-2.5 font-bold tracking-wide text-xs sm:text-sm pl-3 sm:pl-3.5 pr-2 py-1.5 select-none transition-colors duration-200 cursor-pointer ${
             isActive
-              ? stageMode
-                ? `${colorConfig.activeBorderClass} ${colorConfig.activeBgClass} ${colorConfig.activeTextClass}`
-                : 'border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-500/[0.15] via-emerald-500/[0.04] to-transparent text-emerald-300'
+              ? `${colorConfig.activeBorderClass} ${colorConfig.activeBgClass} ${colorConfig.activeTextClass}`
               : 'border-l-4 border-transparent text-zinc-400 hover:text-zinc-200'
           }`}
           title={`Repite ${secTiming?.parentTitle || 'sección anterior'} (clic para ver acordes)`}
         >
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className={`font-extrabold text-xs ${stageMode ? colorConfig.activeTextClass : 'text-emerald-400'}`}>⤴</span>
+              <span className={`font-extrabold text-xs ${colorConfig.activeTextClass}`}>⤴</span>
               <span className="uppercase font-black text-white">{block.headerLine?.comment}</span>
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                 isActive
-                  ? stageMode
-                    ? `${colorConfig.activeTextClass} bg-white/10`
-                    : 'text-emerald-300 bg-emerald-500/20'
+                  ? `${colorConfig.activeTextClass} bg-white/10`
                   : 'text-zinc-500 bg-zinc-800/40'
               }`}>
                 Repite {secTiming?.parentTitle || 'sección anterior'}
               </span>
               {isCurrentSec && (
-                <span className={`text-[10px] font-bold animate-pulse flex items-center gap-1 ${
-                  stageMode ? colorConfig.activeTextClass : 'text-amber-300'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full inline-block ${stageMode ? colorConfig.pingClass : 'bg-amber-400'}`} />
+                <span className={`text-[10px] font-bold animate-pulse flex items-center gap-1 ${colorConfig.activeTextClass}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full inline-block ${colorConfig.pingClass}`} />
                   En pantalla arriba ↑
                 </span>
               )}
@@ -830,9 +717,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
             {secTiming?.durationSec ? (
               <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${
                 isActive
-                  ? stageMode
-                    ? colorConfig.badgeClass
-                    : 'text-emerald-300 bg-emerald-500/25'
+                  ? colorConfig.badgeClass
                   : 'text-zinc-500'
               }`}>
                 ⏱ {secTiming.durationSec}s
@@ -851,9 +736,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
         data-section-index={sIdx}
         className={`my-2.5 sm:my-3 transition-colors duration-200 pl-3 sm:pl-3.5 pr-2 py-1.5 ${
           isActive
-            ? stageMode
-              ? `${colorConfig.activeBorderClass} ${colorConfig.activeBgClass}`
-              : 'border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-500/[0.14] via-emerald-500/[0.04] to-transparent'
+            ? `${colorConfig.activeBorderClass} ${colorConfig.activeBgClass}`
             : 'border-l-4 border-transparent'
         }`}
       >
@@ -862,26 +745,20 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
             <span className="flex items-center gap-2">
               {isActive ? (
-                <span className={`w-2 h-2 rounded-full animate-ping inline-block shrink-0 ${
-                  stageMode ? colorConfig.pingClass : 'bg-emerald-400'
-                }`} />
+                <span className={`w-2 h-2 rounded-full animate-ping inline-block shrink-0 ${colorConfig.pingClass}`} />
               ) : (
-                <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${
-                  stageMode ? `${colorConfig.pingClass} opacity-60` : 'bg-emerald-500/60'
-                }`} />
+                <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${colorConfig.pingClass} opacity-60`} />
               )}
               <span className={`uppercase font-black tracking-wide text-xs sm:text-sm ${
                 isActive
-                  ? stageMode ? colorConfig.activeTextClass : 'text-emerald-300'
-                  : stageMode ? 'text-zinc-300' : 'text-emerald-400/90'
+                  ? colorConfig.activeTextClass
+                  : stageMode ? 'text-zinc-300' : colorConfig.primaryText
               }`}>
                 {block.headerLine.comment}
               </span>
               {isTargetOfActive && !isCurrentSec && (
-                <span className={`text-[10px] font-bold animate-pulse flex items-center gap-1 px-2 py-0.5 rounded-full ${
-                  stageMode ? `${colorConfig.activeTextClass} bg-white/10` : 'text-amber-300 bg-amber-500/10'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full inline-block ${stageMode ? colorConfig.pingClass : 'bg-amber-400'}`} />
+                <span className={`text-[10px] font-bold animate-pulse flex items-center gap-1 px-2 py-0.5 rounded-full ${colorConfig.activeTextClass} bg-white/10`}>
+                  <span className={`w-1.5 h-1.5 rounded-full inline-block ${colorConfig.pingClass}`} />
                   Repitiendo arriba
                 </span>
               )}
@@ -890,9 +767,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               <span
                 className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full transition flex items-center gap-1 ${
                   isActive
-                    ? stageMode
-                      ? colorConfig.badgeClass
-                      : 'bg-emerald-500/25 text-emerald-300'
+                    ? colorConfig.badgeClass
                     : 'text-zinc-500'
                 }`}
               >
@@ -925,8 +800,6 @@ export const SongViewer: React.FC<SongViewerProps> = ({
       </div>
     )
   }
-
-  const colorConfig = STAGE_COLORS[stageColor] || STAGE_COLORS.pink
 
   return (
     <div
@@ -1192,7 +1065,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 <button
                   onClick={() => handleShift(-1)}
                   title="Bajar 1 semitono (-1)"
-                  className="px-2 py-0.5 sm:py-1 bg-zinc-700/80 hover:bg-zinc-600 text-zinc-200 hover:text-emerald-400 font-bold text-xs rounded-lg transition"
+                  className={`px-2 py-0.5 sm:py-1 bg-zinc-700/80 hover:bg-zinc-600 text-zinc-200 ${colorConfig.primaryHoverText} font-bold text-xs rounded-lg transition`}
                 >
                   -1
                 </button>
@@ -1201,7 +1074,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                   <select
                     value={effectiveKey}
                     onChange={e => handleKeySelect(e.target.value)}
-                    className="appearance-none bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm px-2 sm:px-2.5 py-0.5 sm:py-1 pr-5 rounded-lg shadow cursor-pointer focus:outline-none"
+                    className={`appearance-none ${colorConfig.primaryBg} ${colorConfig.primaryBgHover} text-white font-black text-xs sm:text-sm px-2 sm:px-2.5 py-0.5 sm:py-1 pr-5 rounded-lg shadow cursor-pointer focus:outline-none`}
                   >
                     {keyOptions.map(k => (
                       <option key={k} value={k} className="bg-zinc-900 text-white">
@@ -1215,7 +1088,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 <button
                   onClick={() => handleShift(1)}
                   title="Subir 1 semitono (+1)"
-                  className="px-2 py-0.5 sm:py-1 bg-zinc-700/80 hover:bg-zinc-600 text-zinc-200 hover:text-emerald-400 font-bold text-xs rounded-lg transition"
+                  className={`px-2 py-0.5 sm:py-1 bg-zinc-700/80 hover:bg-zinc-600 text-zinc-200 ${colorConfig.primaryHoverText} font-bold text-xs rounded-lg transition`}
                 >
                   +1
                 </button>
@@ -1223,7 +1096,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 {semitoneShift !== 0 && (
                   <div className="flex items-center gap-1 pl-1">
                     <span
-                      className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded"
+                      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${colorConfig.primaryBadge}`}
                       title="Transporte individual (solo en tu pantalla)"
                     >
                       {semitoneShift > 0 ? `+${semitoneShift}` : semitoneShift}
@@ -1246,7 +1119,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 title="Entrar en Modo Escenario Zen (Cero distracciones)"
                 className="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border-zinc-700 cursor-pointer select-none"
               >
-                <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                <Sparkles className={`w-3.5 h-3.5 ${colorConfig.primaryText}`} />
                 <span className="hidden sm:inline">Modo Escenario</span>
               </button>
             </div>
@@ -1264,9 +1137,9 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               <button
                 onClick={() => setIsLocalPrintOpen(true)}
                 title="Guardar como archivo PDF"
-                className="px-2.5 sm:px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 hover:text-white text-emerald-300 border border-emerald-500/40 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+                className={`px-2.5 sm:px-3 py-1.5 ${colorConfig.primaryBadge} font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer`}
               >
-                <FileDown className="w-4 h-4 text-emerald-400" />
+                <FileDown className={`w-4 h-4 ${colorConfig.primaryText}`} />
                 <span className="hidden sm:inline">Guardar PDF</span>
               </button>
 
@@ -1275,7 +1148,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 <button
                   onClick={onEdit}
                   title="Editar acordes y letra"
-                  className="px-2.5 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 border border-emerald-500 cursor-pointer"
+                  className={`px-2.5 sm:px-3.5 py-1.5 ${colorConfig.primaryButton} font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer`}
                 >
                   <Edit3 className="w-4 h-4" />
                   <span className="hidden sm:inline">Editar</span>
@@ -1288,7 +1161,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 className="p-1.5 sm:p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white rounded-xl border border-zinc-700 transition flex items-center justify-center cursor-pointer"
                 title="Ajustes y opciones de visualización"
               >
-                <Menu className="w-5 h-5 text-emerald-400" />
+                <Menu className={`w-5 h-5 ${colorConfig.primaryText}`} />
               </button>
             </div>
           </div>
@@ -1338,9 +1211,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 </h1>
               </div>
               {(parsed.artist || song.artist) && (
-                <p className={`text-xs sm:text-sm font-medium mt-0.5 ${
-                  stageMode ? colorConfig.activeTextClass : 'text-emerald-400'
-                }`}>
+                <p className={`text-xs sm:text-sm font-medium mt-0.5 ${colorConfig.primaryText}`}>
                   {parsed.artist || song.artist}
                 </p>
               )}
@@ -1348,11 +1219,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
 
             {/* Quick Badges: Key & Capo */}
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-xl border ${
-                stageMode
-                  ? colorConfig.badgeClass
-                  : 'bg-zinc-800/90 text-emerald-400 border border-zinc-700'
-              }`}>
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-xl border ${colorConfig.badgeClass}`}>
                 {effectiveKey}
               </span>
               {localCapo > 0 && (
@@ -1406,7 +1273,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               {/* Drawer Header */}
               <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
                 <div className="flex items-center gap-2">
-                  <Sliders className="w-5 h-5 text-emerald-400" />
+                  <Sliders className={`w-5 h-5 ${colorConfig.primaryText}`} />
                   <div>
                     <h3 className="font-bold text-white text-base leading-tight">Ajustes de Canción</h3>
                     <p className="text-xs text-zinc-400">Herramientas y preferencias de lectura</p>
@@ -1423,7 +1290,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
 
               {/* Group 1: Columns Layout */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider block">
+                <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider block`}>
                   Columnas en Pantalla
                 </label>
                 <div className="grid grid-cols-2 gap-2 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
@@ -1431,7 +1298,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                     onClick={() => setNumColumns(1)}
                     className={`py-2 px-3 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 ${
                       numColumns === 1
-                        ? 'bg-emerald-600 text-white shadow-md'
+                        ? `${colorConfig.primaryBg} text-white shadow-md`
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
@@ -1441,7 +1308,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                     onClick={() => setNumColumns(2)}
                     className={`py-2 px-3 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 ${
                       numColumns === 2
-                        ? 'bg-emerald-600 text-white shadow-md'
+                        ? `${colorConfig.primaryBg} text-white shadow-md`
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
@@ -1454,7 +1321,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               {/* Group 2: Font Zoom */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                  <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider`}>
                     Tamaño de Letra
                   </label>
                   <span className="text-xs font-mono font-bold text-zinc-400">{fontSize}px</span>
@@ -1486,7 +1353,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
 
               {/* Group 3: Capo & Metronome */}
               <div className="space-y-2.5">
-                <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider block">
+                <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider block`}>
                   Afinación y Ritmo
                 </label>
                 {/* Capo */}
@@ -1524,7 +1391,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                     onClick={() => setShowMetronome(m => !m)}
                     className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition ${
                       showMetronome
-                        ? 'bg-emerald-600 text-white border-emerald-500'
+                        ? `${colorConfig.primaryBg} text-white border-transparent`
                         : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700'
                     }`}
                   >
@@ -1535,7 +1402,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
 
               {/* Group 4: Notation System */}
               <div className="space-y-2.5">
-                <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider block">
+                <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider block`}>
                   Notación Musical
                 </label>
                 {/* Notation System */}
@@ -1544,7 +1411,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                     onClick={() => setNotation('anglo')}
                     className={`py-2 px-2.5 text-xs font-bold rounded-lg transition ${
                       notation === 'anglo'
-                        ? 'bg-emerald-600 text-white shadow-md'
+                        ? `${colorConfig.primaryBg} text-white shadow-md`
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
@@ -1554,7 +1421,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                     onClick={() => setNotation('latin')}
                     className={`py-2 px-2.5 text-xs font-bold rounded-lg transition ${
                       notation === 'latin'
-                        ? 'bg-emerald-600 text-white shadow-md'
+                        ? `${colorConfig.primaryBg} text-white shadow-md`
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
@@ -1568,7 +1435,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                     onClick={() => setAccidental('sharp')}
                     className={`py-2 px-2.5 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1 ${
                       accidental === 'sharp'
-                        ? 'bg-emerald-600 text-white shadow-md'
+                        ? `${colorConfig.primaryBg} text-white shadow-md`
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
@@ -1578,7 +1445,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                     onClick={() => setAccidental('flat')}
                     className={`py-2 px-2.5 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1 ${
                       accidental === 'flat'
-                        ? 'bg-emerald-600 text-white shadow-md'
+                        ? `${colorConfig.primaryBg} text-white shadow-md`
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
@@ -1589,7 +1456,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
 
               {/* Group 5: Stage Mode & Fullscreen */}
               <div className="space-y-2.5">
-                <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider block">
+                <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider block`}>
                   Pantalla y Atril
                 </label>
                 {/* Stage Mode */}
@@ -1597,7 +1464,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                        <Sparkles className={`w-3.5 h-3.5 ${colorConfig.primaryText}`} />
                         <span>Modo Escenario Zen</span>
                       </div>
                       <span className="text-[11px] text-zinc-400">Cero distracciones y pantalla completa</span>
@@ -1617,7 +1484,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                   {/* Stage color selector */}
                   <div>
                     <span className="text-[11px] font-bold text-zinc-400 block mb-1.5">
-                      Color de acordes:
+                      Tema de color (Toda la app):
                     </span>
                     <div className="grid grid-cols-5 gap-1.5">
                       {(Object.keys(STAGE_COLORS) as StageColor[]).map(cKey => {
@@ -1647,9 +1514,9 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                   <div>
                     <div className="text-xs font-bold text-white flex items-center gap-1.5">
                       {isFullscreen ? (
-                        <Minimize className="w-3.5 h-3.5 text-emerald-400" />
+                        <Minimize className={`w-3.5 h-3.5 ${colorConfig.primaryText}`} />
                       ) : (
-                        <Maximize className="w-3.5 h-3.5 text-emerald-400" />
+                        <Maximize className={`w-3.5 h-3.5 ${colorConfig.primaryText}`} />
                       )}
                       <span>Pantalla Completa</span>
                     </div>
@@ -1674,7 +1541,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                     }}
                     className="w-full py-2.5 px-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-xs rounded-xl border border-zinc-700 transition flex items-center justify-center gap-2"
                   >
-                    <BookOpen className="w-4 h-4 text-emerald-400" />
+                    <BookOpen className={`w-4 h-4 ${colorConfig.primaryText}`} />
                     <span>Ver Catálogo de Canciones</span>
                   </button>
                 </div>
@@ -1685,7 +1552,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
             <div className="pt-6 border-t border-zinc-800 mt-6">
               <button
                 onClick={() => setIsMenuOpen(false)}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-md"
+                className={`w-full py-2.5 ${colorConfig.primaryButton} font-bold text-xs rounded-xl transition shadow-md`}
               >
                 Listo
               </button>
