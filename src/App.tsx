@@ -66,11 +66,11 @@ export function App() {
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans pb-16">
         {/* Top Header matching home */}
         <header className="border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-md sticky top-0 z-20">
-          <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="max-w-6xl mx-auto px-2.5 sm:px-6 h-14 sm:h-20 flex items-center justify-between gap-1.5 sm:gap-4 flex-nowrap">
             {/* Logo & Brand */}
             <div
               onClick={() => setViewMode('library')}
-              className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0 cursor-pointer hover:opacity-90 transition"
+              className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0 cursor-pointer hover:opacity-90 transition"
               title="Volver a Canciones"
             >
               <img
@@ -79,7 +79,7 @@ export function App() {
                 className="h-8 sm:h-11 w-auto object-contain shrink-0 drop-shadow-[0_2px_12px_rgba(16,185,129,0.4)] transition-transform hover:scale-105"
               />
               <div className="min-w-0">
-                <span className="font-black text-base sm:text-xl tracking-tight text-white block leading-tight truncate">
+                <span className="font-black text-sm sm:text-xl tracking-tight text-white block leading-tight truncate">
                   chords<span className={`transition-colors ${themeConfig.primaryText}`}>Lampei</span>
                 </span>
                 <span className="text-[10px] sm:text-[11px] text-zinc-400 font-medium hidden sm:inline">Repertorio Digital & Cifrados</span>
@@ -87,11 +87,11 @@ export function App() {
             </div>
 
             {/* Module Navigation Tabs */}
-            <div className="flex items-center bg-zinc-950 p-1 rounded-2xl border border-zinc-800 shrink-0">
+            <div className="flex items-center bg-zinc-950 p-0.5 sm:p-1 rounded-xl sm:rounded-2xl border border-zinc-800 shrink-0 gap-0.5 sm:gap-1">
               <button
                 type="button"
                 onClick={() => setViewMode('library')}
-                className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition flex items-center gap-1.5 cursor-pointer"
+                className="p-1.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition flex items-center gap-1.5 cursor-pointer"
                 title="Ver catálogo de canciones"
               >
                 <Music className="w-3.5 h-3.5" />
@@ -99,7 +99,8 @@ export function App() {
               </button>
               <button
                 type="button"
-                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${themeConfig.primaryBg} text-white shadow`}
+                className={`p-1.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${themeConfig.primaryBg} text-white shadow`}
+                title="Afinador Digital"
               >
                 <Radio className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Afinador</span>
@@ -107,7 +108,7 @@ export function App() {
             </div>
 
             {/* Theme Dropdown */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <ThemeDropdown />
             </div>
           </div>

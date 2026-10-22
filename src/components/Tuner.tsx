@@ -6,7 +6,11 @@ import {
   VolumeX,
   HelpCircle,
   Radio,
-  ArrowLeft
+  ArrowLeft,
+  ArrowUp,
+  ArrowDown,
+  CheckCircle,
+  Music
 } from 'lucide-react'
 import {
   TUNER_PRESETS,
@@ -39,6 +43,7 @@ export const Tuner: React.FC<TunerProps> = ({ onBackToLibrary }) => {
   const [notation, setNotation] = useState<NotationSystem>('anglo')
   const [a4Frequency, setA4Frequency] = useState<number>(440)
   const [isListening, setIsListening] = useState<boolean>(false)
+  const [isHolding, setIsHolding] = useState<boolean>(false)
   const [micError, setMicError] = useState<string | null>(null)
   const [currentPitch, setCurrentPitch] = useState<PitchResult | null>(null)
   const [activeToneString, setActiveToneString] = useState<number | null>(null)
@@ -48,6 +53,8 @@ export const Tuner: React.FC<TunerProps> = ({ onBackToLibrary }) => {
   const streamRef = useRef<MediaStream | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const smoothedCentsRef = useRef<number>(0)
+  const lastPitchRef = useRef<PitchResult | null>(null)
+  const lastDetectedTimestampRef = useRef<number>(0)
 
   const currentPreset = useMemo<InstrumentPreset>(() => {
     return TUNER_PRESETS.find(p => p.id === presetId) || TUNER_PRESETS[0]
@@ -65,18 +72,29 @@ export const Tuner: React.FC<TunerProps> = ({ onBackToLibrary }) => {
   const startListening = async () => {
     setMicError(null)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
-        }
-      })
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        })
+      } catch {
+        // Fallback for mobile browsers with strict constraint handling
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      }
       streamRef.current = stream
 
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
       const audioCtx = new AudioCtx()
       audioContextRef.current = audioCtx
+
+      // Crucial for iOS Safari & Android Chrome: explicitly resume audio context
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume()
+      }
 
       const analyser = audioCtx.createAnalyser()
       analyser.fftSize = 2048
@@ -86,6 +104,7 @@ export const Tuner: React.FC<TunerProps> = ({ onBackToLibrary }) => {
       source.connect(analyser)
 
       setIsListening(true)
+      setIsHolding(false)
 
       const buffer = new Float32Array(analyser.fftSize)
 
@@ -94,7 +113,7 @@ export const Tuner: React.FC<TunerProps> = ({ onBackToLibrary }) => {
         analyserRef.current.getFloatTimeDomainData(buffer)
 
         const result = detectPitchYIN(buffer, audioCtx.sampleRate, 0.15)
-        if (result && result.probability > 0.6) {
+        if (result && result.probability > 0.52) {
           const pitch = frequencyToPitch(result.frequency, a4Frequency)
 
           // Smooth cents to avoid rapid jitter
@@ -102,7 +121,10 @@ export const Tuner: React.FC<TunerProps> = ({ onBackToLibrary }) => {
           pitch.cents = Math.round(smoothedCentsRef.current)
           pitch.inTune = Math.abs(pitch.cents) <= 3
 
+          lastPitchRef.current = pitch
+          lastDetectedTimestampRef.current = Date.now()
           setCurrentPitch(pitch)
+          setIsHolding(false)
 
           if (pitch.inTune && typeof navigator !== 'undefined' && navigator.vibrate) {
             try {
@@ -110,8 +132,15 @@ export const Tuner: React.FC<TunerProps> = ({ onBackToLibrary }) => {
             } catch {}
           }
         } else {
-          // Slowly decay towards null when signal is quiet
-          setCurrentPitch(prev => (prev ? { ...prev, clarity: prev.clarity * 0.85 } : null))
+          // If signal decays (between plucks), hold the last detected pitch for 2.5s
+          const timeSinceDetection = Date.now() - lastDetectedTimestampRef.current
+          if (lastPitchRef.current && timeSinceDetection < 2500) {
+            setIsHolding(true)
+          } else {
+            setIsHolding(false)
+            setCurrentPitch(null)
+            lastPitchRef.current = null
+          }
         }
 
         animationFrameRef.current = requestAnimationFrame(analyzeLoop)
@@ -144,7 +173,9 @@ export const Tuner: React.FC<TunerProps> = ({ onBackToLibrary }) => {
     }
     analyserRef.current = null
     setIsListening(false)
+    setIsHolding(false)
     setCurrentPitch(null)
+    lastPitchRef.current = null
   }
 
   // Cleanup on unmount
@@ -326,108 +357,172 @@ export const Tuner: React.FC<TunerProps> = ({ onBackToLibrary }) => {
         ) : (
           /* Live Meter Display */
           <div className="w-full max-w-lg flex flex-col items-center z-10">
-            {/* Visual Gauge Scale Meter */}
-            <div className="w-full relative px-4 pt-2 pb-6">
-              {/* Ticks and scale labels */}
-              <div className="relative h-14 flex items-end justify-between px-2">
-                {[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50].map(c => {
-                  const isZero = c === 0
-                  const isBig = c % 20 === 0
-                  return (
-                    <div key={c} className="flex flex-col items-center">
-                      <span className={`text-[10px] font-mono font-bold mb-1 select-none ${
-                        isZero
-                          ? currentPitch?.inTune ? `${themeConfig.primaryText} scale-125` : 'text-zinc-200'
-                          : 'text-zinc-600'
-                      }`}>
-                        {isZero ? '0' : Math.abs(c)}
-                      </span>
-                      <div
-                        className={`w-0.5 rounded-full transition-colors ${
-                          isZero
-                            ? currentPitch?.inTune ? `${themeConfig.primaryBg} w-1.5 h-8` : 'bg-emerald-400 w-1 h-7'
-                            : isBig
-                            ? 'bg-zinc-600 h-5'
-                            : 'bg-zinc-800 h-3'
-                        }`}
-                      />
+            {currentPitch ? (
+              <>
+                {/* 1. TOP HERO: Identified Note & String Header */}
+                <div className="flex flex-col items-center text-center mb-3">
+                  {matchedString && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 text-xs font-bold mb-1 shadow-sm">
+                      <Music className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>{currentPreset.name} • Cuerda {matchedString.stringNumber}</span>
                     </div>
-                  )
-                })}
-              </div>
+                  )}
 
-              {/* Central In-Tune Target Track */}
-              <div className="w-full h-2.5 bg-zinc-950 rounded-full border border-zinc-800 relative mt-2 overflow-hidden shadow-inner">
-                {/* Center target safe zone */}
-                <div className="absolute left-1/2 -translate-x-1/2 w-4 h-full bg-emerald-500/30 border-x border-emerald-500/50" />
-
-                {/* Animated Needle Bar */}
-                {currentPitch && (
-                  <div
-                    className={`absolute top-0 bottom-0 w-3 rounded-full transition-all duration-150 shadow-md ${
-                      currentPitch.inTune
-                        ? `${themeConfig.primaryBg} shadow-[0_0_12px_rgba(52,211,153,0.9)]`
-                        : Math.abs(currentPitch.cents) < 15
-                        ? 'bg-amber-400 shadow-amber-400/40'
-                        : 'bg-rose-500 shadow-rose-500/40'
-                    }`}
-                    style={{
-                      left: `calc(${50 + (displayCents / 50) * 48}% - 6px)`
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* Note & Frequency Central Box */}
-            <div className="flex flex-col items-center my-4 text-center">
-              {currentPitch ? (
-                <>
-                  {/* Note Name Display */}
-                  <div className="relative inline-flex items-baseline gap-1 my-1">
-                    <span className={`text-6xl sm:text-7xl font-black tracking-tight select-none transition-colors ${
-                      currentPitch.inTune
-                        ? `${themeConfig.primaryText} drop-shadow-[0_0_20px_rgba(52,211,153,0.6)]`
-                        : 'text-white'
-                    }`}>
+                  {/* Big Note Name */}
+                  <div className="relative inline-flex items-baseline gap-2 my-0.5">
+                    <span
+                      className={`text-7xl sm:text-8xl font-black tracking-tight select-none transition-colors duration-150 ${
+                        currentPitch.inTune
+                          ? `${themeConfig.primaryText} drop-shadow-[0_0_24px_rgba(52,211,153,0.7)]`
+                          : 'text-white'
+                      }`}
+                    >
                       {notation === 'latin' ? currentPitch.noteNameLatin : currentPitch.noteName}
                     </span>
-                    <span className="text-xl font-mono font-bold text-zinc-500 select-none">
+                    <span className="text-2xl sm:text-3xl font-mono font-bold text-zinc-500 select-none">
                       {currentPitch.octave}
+                    </span>
+                    <span className="text-sm font-semibold text-zinc-500 select-none ml-1">
+                      ({notation === 'latin' ? currentPitch.noteName : currentPitch.noteNameLatin})
                     </span>
                   </div>
 
-                  {/* Status Indicator Badge */}
-                  <div className="my-2">
+                  {/* Big Actionable Directive Banner: APRETAR vs AFLOJAR vs ¡AFINADA! */}
+                  <div className="mt-2 mb-1">
                     {currentPitch.inTune ? (
-                      <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5 shadow-lg ${themeConfig.primaryButton} animate-bounce`}>
-                        <span>✓</span> ¡Afinado Perfecto!
-                      </span>
+                      <div
+                        className={`px-5 sm:px-6 py-2 rounded-2xl ${themeConfig.primaryButton} font-black text-sm sm:text-base shadow-xl flex items-center gap-2 animate-bounce`}
+                      >
+                        <CheckCircle className="w-5 h-5 stroke-[2.5]" />
+                        <span>¡AFINADA!</span>
+                        <span className="text-xs font-mono font-bold opacity-90">(Tono exacto)</span>
+                      </div>
                     ) : currentPitch.cents < 0 ? (
-                      <span className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-flex items-center gap-1.5">
-                        <span>↑</span> Sube la clavija ({Math.abs(currentPitch.cents)} cents bajo)
-                      </span>
+                      <div className="px-5 sm:px-6 py-2 rounded-2xl bg-amber-500/20 border-2 border-amber-500/60 text-amber-300 font-black text-sm sm:text-base shadow-lg shadow-amber-500/10 flex items-center gap-2 animate-pulse">
+                        <ArrowUp className="w-5 h-5 stroke-[3]" />
+                        <span>APRETAR (Tensar clavija)</span>
+                        <span className="text-xs font-mono font-bold text-amber-400/90 ml-1">
+                          {Math.abs(currentPitch.cents)} cents bajo
+                        </span>
+                      </div>
                     ) : (
-                      <span className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-flex items-center gap-1.5">
-                        <span>↓</span> Baja la clavija (+{currentPitch.cents} cents alto)
-                      </span>
+                      <div className="px-5 sm:px-6 py-2 rounded-2xl bg-rose-500/20 border-2 border-rose-500/60 text-rose-300 font-black text-sm sm:text-base shadow-lg shadow-rose-500/10 flex items-center gap-2 animate-pulse">
+                        <ArrowDown className="w-5 h-5 stroke-[3]" />
+                        <span>AFLOJAR (Destensar clavija)</span>
+                        <span className="text-xs font-mono font-bold text-rose-400/90 ml-1">
+                          +{currentPitch.cents} cents alto
+                        </span>
+                      </div>
                     )}
                   </div>
 
-                  {/* Frequency & Target Details */}
-                  <div className="flex items-center gap-3 text-xs font-mono text-zinc-400 mt-2">
-                    <span>{currentPitch.frequency.toFixed(1)} Hz</span>
-                    <span>•</span>
-                    <span>Obj: {currentPitch.targetFrequency.toFixed(1)} Hz</span>
-                  </div>
-                </>
-              ) : (
-                <div className="py-8 text-center text-zinc-500 animate-pulse">
-                  <p className="text-base font-bold text-zinc-400 mb-1">Escuchando instrumento...</p>
-                  <p className="text-xs">Toca una cuerda con fuerza para comenzar</p>
+                  {/* Hold persistence status pill */}
+                  {isHolding && (
+                    <span className="text-[10px] font-bold text-zinc-400 bg-zinc-950/80 px-2.5 py-0.5 rounded-full border border-zinc-800 mt-1">
+                      Última nota capturada • Toca de nuevo
+                    </span>
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* 2. Visual Gauge Scale Meter with APRETAR / AFLOJAR guides */}
+                <div className="w-full relative px-2 pt-2 pb-4">
+                  {/* Gauge labels on top of ticks: Left: APRETAR, Center: PERFECTO, Right: AFLOJAR */}
+                  <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider px-1 mb-1">
+                    <span className="text-amber-400/90 flex items-center gap-1">
+                      <ArrowUp className="w-3 h-3 stroke-[3]" />
+                      <span>Apretar (Bajo)</span>
+                    </span>
+                    <span className={`text-[10px] font-black ${currentPitch.inTune ? themeConfig.primaryText : 'text-zinc-500'}`}>
+                      Centro (0)
+                    </span>
+                    <span className="text-rose-400/90 flex items-center gap-1">
+                      <span>Aflojar (Alto)</span>
+                      <ArrowDown className="w-3 h-3 stroke-[3]" />
+                    </span>
+                  </div>
+
+                  {/* Ticks and scale labels */}
+                  <div className="relative h-12 flex items-end justify-between px-2">
+                    {[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50].map(c => {
+                      const isZero = c === 0
+                      const isBig = c % 20 === 0
+                      return (
+                        <div key={c} className="flex flex-col items-center">
+                          <span
+                            className={`text-[10px] font-mono font-bold mb-1 select-none ${
+                              isZero
+                                ? currentPitch?.inTune
+                                  ? `${themeConfig.primaryText} scale-125`
+                                  : 'text-zinc-200'
+                                : 'text-zinc-600'
+                            }`}
+                          >
+                            {isZero ? '0' : Math.abs(c)}
+                          </span>
+                          <div
+                            className={`w-0.5 rounded-full transition-colors ${
+                              isZero
+                                ? currentPitch?.inTune
+                                  ? `${themeConfig.primaryBg} w-1.5 h-7`
+                                  : 'bg-emerald-400 w-1 h-6'
+                                : isBig
+                                ? 'bg-zinc-600 h-4'
+                                : 'bg-zinc-800 h-2.5'
+                            }`}
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Central In-Tune Target Track */}
+                  <div className="w-full h-3 bg-zinc-950 rounded-full border border-zinc-800 relative mt-1.5 overflow-hidden shadow-inner">
+                    {/* Center target safe zone */}
+                    <div className="absolute left-1/2 -translate-x-1/2 w-5 h-full bg-emerald-500/30 border-x border-emerald-500/60" />
+
+                    {/* Animated Needle Bar */}
+                    <div
+                      className={`absolute top-0 bottom-0 w-3 rounded-full transition-all duration-150 shadow-md ${
+                        currentPitch.inTune
+                          ? `${themeConfig.primaryBg} shadow-[0_0_12px_rgba(52,211,153,0.9)]`
+                          : Math.abs(currentPitch.cents) < 15
+                          ? 'bg-amber-400 shadow-amber-400/40'
+                          : 'bg-rose-500 shadow-rose-500/40'
+                      }`}
+                      style={{
+                        left: `calc(${50 + (displayCents / 50) * 48}% - 6px)`
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Frequency & Target Details at bottom */}
+                <div className="flex items-center gap-3 text-xs font-mono text-zinc-400 mt-2 bg-zinc-950/60 px-3.5 py-1.5 rounded-xl border border-zinc-800/80">
+                  <span>Actual: <strong className="text-zinc-200">{currentPitch.frequency.toFixed(1)} Hz</strong></span>
+                  <span>•</span>
+                  <span>Objetivo: <strong className="text-zinc-300">{currentPitch.targetFrequency.toFixed(1)} Hz</strong></span>
+                </div>
+              </>
+            ) : (
+              /* Idle listening state */
+              <div className="py-12 flex flex-col items-center text-center z-10">
+                <div className="w-16 h-16 rounded-2xl bg-zinc-800/60 border border-zinc-700/50 flex items-center justify-center mb-3 shadow-lg animate-pulse">
+                  <Music className="w-8 h-8 text-zinc-400" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-1.5">
+                  Esperando que toques una cuerda...
+                </h3>
+                <p className="text-xs sm:text-sm text-zinc-400 max-w-sm leading-relaxed mb-4">
+                  Toca cualquier cuerda al aire de tu {currentPreset.name.toLowerCase()}. La app te mostrará arriba la nota detectada y si debes{' '}
+                  <strong className="text-amber-300">APRETAR</strong> o{' '}
+                  <strong className="text-rose-300">AFLOJAR</strong> la clavija.
+                </p>
+                <div className="flex items-center gap-2 text-[11px] font-bold text-zinc-500 bg-zinc-950/80 px-3 py-1 rounded-full border border-zinc-800">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                  <span>Micrófono activo y calibrado a {a4Frequency} Hz</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

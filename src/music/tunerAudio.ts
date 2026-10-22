@@ -118,7 +118,7 @@ export function detectPitchYIN(
     sumSquare += buffer[i] * buffer[i]
   }
   const rms = Math.sqrt(sumSquare / bufferSize)
-  if (rms < 0.008) {
+  if (rms < 0.003) {
     return null // Too quiet
   }
 
