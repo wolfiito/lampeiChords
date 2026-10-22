@@ -15,6 +15,12 @@ const LEGACY_DEMO_IDS = new Set([
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'offline'
 
+function extractYoutubeDirective(content?: string): string | undefined {
+  if (!content) return undefined
+  const match = content.match(/\{(?:youtube|yt):\s*([^}]+)\}/i)
+  return match ? match[1].trim() : undefined
+}
+
 export function useSongs() {
   const [songs, setSongs] = useState<Song[]>(() => {
     try {
@@ -25,7 +31,12 @@ export function useSongs() {
       if (stored) {
         const parsed = JSON.parse(stored)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = parsed.filter(s => !LEGACY_DEMO_IDS.has(s.id) && !deletedIds.has(s.id))
+          const cleaned = parsed
+            .filter(s => !LEGACY_DEMO_IDS.has(s.id) && !deletedIds.has(s.id))
+            .map(s => ({
+              ...s,
+              youtubeUrl: s.youtubeUrl || extractYoutubeDirective(s.content)
+            }))
           if (cleaned.length > 0) {
             return cleaned
           }
@@ -97,9 +108,12 @@ export function useSongs() {
           }
         })
 
-        const cloudSongs: Song[] = data.songs.filter(
-          (s: Song) => !LEGACY_DEMO_IDS.has(s.id) && !deletedIds.has(s.id)
-        )
+        const cloudSongs: Song[] = data.songs
+          .filter((s: Song) => !LEGACY_DEMO_IDS.has(s.id) && !deletedIds.has(s.id))
+          .map((s: Song) => ({
+            ...s,
+            youtubeUrl: s.youtubeUrl || extractYoutubeDirective(s.content)
+          }))
 
         if (cloudSongs.length > 0) {
           const maxTime = Math.max(...cloudSongs.map(s => s.updatedAt || 0))

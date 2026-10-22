@@ -159,6 +159,7 @@ export function parseChordPro(chordProContent: string): ParsedSong {
   let key = 'C'
   let capo = 0
   let tempo: number | undefined
+  let youtubeUrl: string | undefined
 
   for (const rawLine of lines) {
     const trimmed = rawLine.trim()
@@ -174,6 +175,7 @@ export function parseChordPro(chordProContent: string): ParsedSong {
       else if (dKey === 'key' || dKey === 'k') key = dVal
       else if (dKey === 'capo') capo = parseInt(dVal, 10) || 0
       else if (dKey === 'tempo' || dKey === 'bpm') tempo = parseInt(dVal, 10) || undefined
+      else if (dKey === 'youtube' || dKey === 'yt') youtubeUrl = dVal
       else if (dKey === 'comment' || dKey === 'c') {
         const secInfo = parseSectionLine(`{comment: ${dVal}}`)
         parsedLines.push({
@@ -290,6 +292,7 @@ export function parseChordPro(chordProContent: string): ParsedSong {
     key,
     capo,
     tempo,
+    youtubeUrl,
     lines: parsedLines
   }
 }

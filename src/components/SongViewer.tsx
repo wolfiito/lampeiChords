@@ -19,6 +19,7 @@ import {
   Play,
   Pause
 } from 'lucide-react'
+import { YouTubeIcon } from './YouTubeIcon'
 import type { Song, NotationSystem, ParsedLine, ChordSegment } from '../types/song'
 import { parseChordPro } from '../music/chordPro'
 import { calculateSongTiming, type SectionTiming } from '../music/songTiming'
@@ -37,6 +38,7 @@ import { CapoModal } from './CapoModal'
 import { MetronomeBar } from './MetronomeBar'
 import { PrintModal } from './PrintModal'
 import { generateDirectSongPdf } from '../utils/pdfGenerator'
+import { YouTubeReferencePlayer } from './YouTubeReferencePlayer'
 
 interface SongViewerProps {
   song: Song
@@ -499,6 +501,32 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   const parsed = useMemo(() => {
     return parseChordPro(song.content)
   }, [song.content])
+
+  // YouTube Reference Player State & Persistence
+  const [isYouTubePlayerOpen, setIsYouTubePlayerOpen] = useState<boolean>(false)
+  const effectiveYoutubeUrl = song.youtubeUrl || parsed.youtubeUrl
+
+  const handleUpdateYoutubeUrl = (newUrl: string) => {
+    let updatedContent = song.content
+    if (/\{(?:youtube|yt):[^\}]*\}/i.test(updatedContent)) {
+      if (newUrl) {
+        updatedContent = updatedContent.replace(/\{(?:youtube|yt):[^\}]*\}/i, `{youtube: ${newUrl}}`)
+      } else {
+        updatedContent = updatedContent.replace(/\s*\{(?:youtube|yt):[^\}]*\}\n?/i, '\n')
+      }
+    } else if (newUrl) {
+      if (/\{title:[^\}]*\}/i.test(updatedContent)) {
+        updatedContent = updatedContent.replace(/(\{title:[^\}]*\})/i, `$1\n{youtube: ${newUrl}}`)
+      } else {
+        updatedContent = `{youtube: ${newUrl}}\n` + updatedContent
+      }
+    }
+
+    onUpdateSong({
+      youtubeUrl: newUrl || undefined,
+      content: updatedContent
+    })
+  }
 
   // Musical timing and repeat linkages
   const timingData = useMemo(() => {
@@ -971,6 +999,22 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 )}
               </div>
 
+              {/* Video / Audio de Referencia en Escenario */}
+              {effectiveYoutubeUrl && (
+                <button
+                  type="button"
+                  onClick={() => setIsYouTubePlayerOpen(o => !o)}
+                  title={isYouTubePlayerOpen ? 'Ocultar video/audio de YouTube' : 'Abrir audio/video de referencia'}
+                  className={`p-1.5 sm:p-2 rounded-xl border transition cursor-pointer active:scale-95 ${
+                    isYouTubePlayerOpen
+                      ? 'bg-red-600 border-red-500 text-white shadow-lg shadow-red-600/30'
+                      : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border-zinc-800'
+                  }`}
+                >
+                  <YouTubeIcon className={`w-4 h-4 ${isYouTubePlayerOpen ? 'text-white' : 'text-red-500'}`} />
+                </button>
+              )}
+
               {/* Pantalla Completa */}
               <button
                 onClick={toggleFullscreen}
@@ -1073,8 +1117,27 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               </span>
             </div>
 
-            {/* Right: Guardar PDF, Editar & Menú Hamburguesa */}
+            {/* Right: Video Referencia, Guardar PDF, Editar & Menú Hamburguesa */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Botón Video de Referencia (YouTube) */}
+              <button
+                type="button"
+                onClick={() => setIsYouTubePlayerOpen(o => !o)}
+                title={effectiveYoutubeUrl ? 'Reproducir audio/video de referencia' : 'Agregar video de YouTube'}
+                className={`px-2 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 border ${
+                  isYouTubePlayerOpen
+                    ? 'bg-red-600 border-red-500 text-white shadow-md shadow-red-600/30'
+                    : effectiveYoutubeUrl
+                    ? 'bg-zinc-800/90 hover:bg-zinc-750 text-zinc-200 hover:text-white border-zinc-700 hover:border-red-500/50'
+                    : 'bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800 hover:border-zinc-700'
+                }`}
+              >
+                <YouTubeIcon className={`w-4 h-4 ${isYouTubePlayerOpen ? 'text-white' : 'text-red-500'}`} />
+                <span className="hidden sm:inline">Referencia</span>
+                {effectiveYoutubeUrl && !isYouTubePlayerOpen && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 hidden sm:inline" />
+                )}
+              </button>
               {/* Guardar PDF button */}
               <button
                 onClick={() => setIsLocalPrintOpen(true)}
@@ -1473,6 +1536,32 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 </div>
               </div>
 
+              {/* Group 5.5: YouTube Reference Video */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false)
+                    setIsYouTubePlayerOpen(true)
+                  }}
+                  className="w-full py-2.5 px-3 bg-zinc-950 hover:bg-zinc-850 text-zinc-200 hover:text-white font-bold text-xs rounded-xl border border-zinc-800 transition flex items-center justify-between gap-2 cursor-pointer shadow-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <YouTubeIcon className="w-4 h-4 text-red-500" />
+                    <span>{effectiveYoutubeUrl ? 'Video de Referencia (YouTube)' : 'Agregar Video de Referencia'}</span>
+                  </div>
+                  {effectiveYoutubeUrl ? (
+                    <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">
+                      Activo
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-zinc-500 font-normal">
+                      + Vincular
+                    </span>
+                  )}
+                </button>
+              </div>
+
               {/* Group 6: Quick Link to Library */}
               {onOpenLibrary && (
                 <div className="pt-2">
@@ -1659,6 +1748,16 @@ export const SongViewer: React.FC<SongViewerProps> = ({
         onExportPdf={handleExportDirectPdf}
         onPrintBrowser={handleBrowserPrint}
         songTitle={song.title}
+      />
+
+      {/* YouTube Floating Reference Player */}
+      <YouTubeReferencePlayer
+        songTitle={song.title}
+        youtubeUrl={effectiveYoutubeUrl}
+        isOpen={isYouTubePlayerOpen}
+        onClose={() => setIsYouTubePlayerOpen(false)}
+        onUpdateUrl={handleUpdateYoutubeUrl}
+        stageMode={stageMode}
       />
     </div>
   )

@@ -11,6 +11,7 @@ export interface Song {
   timeSignature?: string // e.g. '4/4', '3/4', '6/8'
   tags: string[]
   content: string // ChordPro formatted text
+  youtubeUrl?: string // Optional YouTube reference video/audio link
   createdAt: number
   updatedAt: number
 }
@@ -38,6 +39,7 @@ export interface ParsedSong {
   key: string
   capo: number
   tempo?: number
+  youtubeUrl?: string
   lines: ParsedLine[]
 }
 

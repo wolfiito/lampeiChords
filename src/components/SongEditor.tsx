@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { Save, ArrowLeft, Wand2, Eye, EyeOff } from 'lucide-react'
+import { YouTubeIcon } from './YouTubeIcon'
 import type { Song } from '../types/song'
 import { convertTraditionalToChordPro } from '../music/chordConverter'
 import { parseChordPro } from '../music/chordPro'
@@ -19,6 +20,7 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
   const [capo, setCapo] = useState<number>(song.capo || 0)
   const [tempo, setTempo] = useState<number | undefined>(song.tempo)
   const [tags, setTags] = useState<string>(song.tags ? song.tags.join(', ') : '')
+  const [youtubeUrl, setYoutubeUrl] = useState<string>(song.youtubeUrl || '')
   const [content, setContent] = useState(song.content)
   const [showPreview, setShowPreview] = useState(true)
 
@@ -33,6 +35,7 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
       capo,
       tempo: tempo ? Number(tempo) : undefined,
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      youtubeUrl: youtubeUrl.trim() || undefined,
       content
     })
   }
@@ -150,14 +153,28 @@ export const SongEditor: React.FC<SongEditorProps> = ({ song, onSave, onCancel }
           />
         </div>
 
-        <div className="col-span-2 sm:col-span-2 lg:col-span-4">
+        <div className="col-span-2 sm:col-span-1 lg:col-span-2">
           <label className="block text-xs font-semibold text-zinc-400 mb-1">Etiquetas (separadas por coma)</label>
           <input
             type="text"
             value={tags}
             onChange={e => setTags(e.target.value)}
             placeholder="Alabanza, Favoritos, Acústico"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-zinc-500"
+          />
+        </div>
+
+        <div className="col-span-2 sm:col-span-2 lg:col-span-3">
+          <label className="block text-xs font-semibold text-zinc-400 mb-1 flex items-center gap-1.5">
+            <YouTubeIcon className="w-4 h-4 text-red-600" />
+            <span>Enlace de YouTube (Audio/Video de referencia)</span>
+          </label>
+          <input
+            type="url"
+            value={youtubeUrl}
+            onChange={e => setYoutubeUrl(e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=... o https://youtu.be/..."
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
           />
         </div>
       </div>

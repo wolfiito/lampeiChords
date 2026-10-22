@@ -10,6 +10,7 @@ import {
   Edit3,
   Tag
 } from 'lucide-react'
+import { YouTubeIcon } from './YouTubeIcon'
 import type { Song } from '../types/song'
 import { useTheme } from '../context/ThemeContext'
 import { ThemeDropdown } from './ThemeDropdown'
@@ -241,6 +242,12 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                       {song.tempo && (
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-zinc-800 border border-zinc-700/60 text-zinc-300">
                           ⏱️ {song.tempo} bpm
+                        </span>
+                      )}
+                      {song.youtubeUrl && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-500/15 border border-red-500/30 text-red-400 flex items-center gap-1" title="Incluye audio/video de referencia">
+                          <YouTubeIcon className="w-3.5 h-3.5 text-red-500" />
+                          <span>Video</span>
                         </span>
                       )}
                       {song.tags?.slice(0, 2).map(tag => (
