@@ -422,7 +422,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   return (
     <aside
       aria-label="Controles de Auto-Scroll Inteligente"
-      className="no-print fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 flex flex-col items-end gap-2 max-w-[96vw]"
+      className="no-print fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 flex flex-col items-end gap-2 max-w-[96vw] stage-auto-scroll-hide"
     >
       {/* Expanded Control Panel */}
       {isExpanded && (
@@ -846,7 +846,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
           >
             <Music2 className="w-3.5 h-3.5 text-emerald-400" />
             <span className="text-[10px] sm:text-xs font-bold text-emerald-300 max-w-28 sm:max-w-36 truncate select-none">
-              {currentActiveSection?.title || 'Sección'} ({currentTempo} BPM)
+              {currentActiveSection?.title || 'Sección'}
             </span>
           </div>
         )}

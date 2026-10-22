@@ -84,3 +84,9 @@
     break-after: avoid !important;
   }
 }
+
+/* Hide floating autoscroll pill in stage mode */
+body.stage-mode-active .stage-auto-scroll-hide {
+  display: none !important;
+}
+

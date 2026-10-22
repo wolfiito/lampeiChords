@@ -15,7 +15,9 @@ import {
   Maximize,
   Minimize,
   Sliders,
-  BookOpen
+  BookOpen,
+  Play,
+  Pause
 } from 'lucide-react'
 import type { Song, NotationSystem, ParsedLine, ChordSegment } from '../types/song'
 import { parseChordPro } from '../music/chordPro'
@@ -441,6 +443,66 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     } catch {}
   }
 
+  const [isStageScrolling, setIsStageScrolling] = useState<boolean>(false)
+  const [stageScrollSpeed, setStageScrollSpeed] = useState<number>(1.0)
+
+  // Sync body class for stage mode and auto-scroll cleanup
+  useEffect(() => {
+    if (stageMode) {
+      document.body.classList.add('stage-mode-active')
+    } else {
+      document.body.classList.remove('stage-mode-active')
+      setIsStageScrolling(false)
+    }
+    return () => {
+      document.body.classList.remove('stage-mode-active')
+    }
+  }, [stageMode])
+
+  // Smooth continuous requestAnimationFrame auto-scroll for Stage Mode (no BPM)
+  useEffect(() => {
+    if (!stageMode || !isStageScrolling) return
+
+    let animId: number
+    let lastTime = performance.now()
+    // Base speed: 28 px/s at 1.0x
+    const baseSpeed = 28
+
+    const step = (now: number) => {
+      const dt = (now - lastTime) / 1000
+      lastTime = now
+
+      const maxScroll = Math.max(
+        0,
+        document.documentElement.scrollHeight - window.innerHeight
+      )
+
+      if (window.scrollY >= maxScroll - 2) {
+        setIsStageScrolling(false)
+        return
+      }
+
+      window.scrollBy({ top: baseSpeed * stageScrollSpeed * dt, behavior: 'instant' as ScrollBehavior })
+      animId = requestAnimationFrame(step)
+    }
+
+    animId = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(animId)
+  }, [stageMode, isStageScrolling, stageScrollSpeed])
+
+  // Spacebar toggles scroll in Stage Mode
+  useEffect(() => {
+    if (!stageMode) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && e.target === document.body) {
+        e.preventDefault()
+        setIsStageScrolling(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [stageMode])
+
   // Escape key exits Stage Mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -860,86 +922,81 @@ export const SongViewer: React.FC<SongViewerProps> = ({
       }`}>
         {stageMode ? (
           /* =================================================== */
-          /* MODO ZEN / ESCENARIO: CERO DISTRACCIONES           */
+          /* MODO ESCENARIO: CERO DISTRACCIONES (SOLO SCROLL Y ✕)*/
           /* =================================================== */
-          <div className="max-w-6xl mx-auto px-2 sm:px-4 h-13 sm:h-14 flex items-center justify-between gap-2">
-            {/* Left: Salir de Escenario + Transposición + Compás */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {/* Botón Salir */}
+          <div className="max-w-6xl mx-auto px-2 sm:px-4 h-13 sm:h-14 flex items-center justify-between gap-2 sm:gap-3">
+            {/* Left: Botón ✕ para regresar */}
+            <div className="flex items-center shrink-0">
               <button
                 onClick={handleToggleStageMode}
-                title="Salir del Modo Escenario Zen (o pulsa Escape)"
-                className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-bold rounded-xl border border-zinc-800 transition flex items-center gap-1 cursor-pointer select-none"
+                title="Regresar (o pulsa Escape)"
+                className="px-2.5 sm:px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-bold rounded-xl border border-zinc-800 transition-all flex items-center gap-1.5 cursor-pointer select-none active:scale-95"
               >
-                <X className="w-3.5 h-3.5 text-rose-400" />
-                <span className="hidden sm:inline">Salir</span>
-              </button>
-
-              {/* Transposition Pill Compact */}
-              <div className="flex items-center gap-0.5 sm:gap-1 bg-zinc-900 p-0.5 sm:p-1 rounded-xl border border-zinc-800">
-                <button
-                  onClick={() => handleShift(-1)}
-                  title="Bajar 1 semitono (-1)"
-                  className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs rounded-lg transition"
-                >
-                  -1
-                </button>
-
-                <div className="relative inline-block">
-                  <select
-                    value={effectiveKey}
-                    onChange={e => handleKeySelect(e.target.value)}
-                    className="appearance-none bg-zinc-800 hover:bg-zinc-700 text-white font-black text-xs sm:text-sm px-2 py-0.5 pr-4 rounded-lg shadow cursor-pointer focus:outline-none"
-                  >
-                    {keyOptions.map(k => (
-                      <option key={k} value={k} className="bg-black text-white">
-                        {k}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-2.5 h-2.5 text-white/90 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-
-                <button
-                  onClick={() => handleShift(1)}
-                  title="Subir 1 semitono (+1)"
-                  className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs rounded-lg transition"
-                >
-                  +1
-                </button>
-              </div>
-
-              {/* Botón Compás / Metrónomo */}
-              <button
-                onClick={() => setShowMetronome(m => !m)}
-                title={showMetronome ? 'Ocultar barra de compás' : 'Ver compás y tempo en pantalla'}
-                className={`px-2.5 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 cursor-pointer select-none ${
-                  showMetronome
-                    ? `${colorConfig.badgeClass} font-black`
-                    : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border-zinc-800'
-                }`}
-              >
-                <span>⏱</span>
-                <span>Compás</span>
-                {song.tempo && <span className="font-mono text-[11px] opacity-80 hidden md:inline">{song.tempo} BPM</span>}
+                <X className="w-4 h-4 text-rose-400" />
+                <span className="font-semibold text-xs">Regresar</span>
               </button>
             </div>
 
-            {/* Center: Song Title in Stage Mode */}
-            <div className="hidden lg:flex items-center justify-center flex-1 min-w-0 px-2 truncate">
-              <span className="text-sm font-black text-zinc-200 truncate flex items-center gap-2">
-                <span>{song.title}</span>
-                <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-md border ${colorConfig.badgeClass}`}>
-                  Modo Zen
-                </span>
+            {/* Center: Song Title */}
+            <div className="flex items-center justify-center flex-1 min-w-0 px-2 truncate">
+              <span className="text-sm sm:text-base font-extrabold text-zinc-200 truncate tracking-tight">
+                {song.title}
               </span>
             </div>
 
-            {/* Right: Paleta de Colores (Rosa, Azul, Naranja, Ámbar, Verde) + Pantalla Completa */}
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Right: Scroll (sin BPM) + Colores + Pantalla Completa */}
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+              {/* Botón Auto-Scroll Integrado (Sin BPM) */}
+              <div className="flex items-center bg-zinc-900/90 p-0.5 sm:p-1 rounded-xl border border-zinc-800">
+                <button
+                  onClick={() => setIsStageScrolling(s => !s)}
+                  title={isStageScrolling ? 'Pausar auto-scroll (Espacio)' : 'Iniciar auto-scroll (Espacio)'}
+                  className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer select-none ${
+                    isStageScrolling
+                      ? 'bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/30 animate-pulse'
+                      : `${colorConfig.badgeClass} hover:brightness-125`
+                  }`}
+                >
+                  {isStageScrolling ? (
+                    <>
+                      <Pause className="w-3.5 h-3.5 fill-current" />
+                      <span>Pausar</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Scroll</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Velocidad: - 1.0x + (Sin BPM) */}
+                <div className="flex items-center pl-1 pr-0.5 gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setStageScrollSpeed(s => Math.max(0.3, Math.round((s - 0.2) * 10) / 10))}
+                    title="Reducir velocidad de scroll"
+                    className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition cursor-pointer"
+                  >
+                    -
+                  </button>
+                  <span className="text-[10px] sm:text-[11px] font-mono font-bold text-zinc-300 min-w-[2rem] sm:min-w-[2.2rem] text-center select-none">
+                    {stageScrollSpeed.toFixed(1)}x
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setStageScrollSpeed(s => Math.min(4.0, Math.round((s + 0.2) * 10) / 10))}
+                    title="Aumentar velocidad de scroll"
+                    className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition cursor-pointer"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
               {/* Selector Rápido de Colores */}
               <div
-                className="flex items-center gap-1.5 bg-zinc-900/90 px-2 py-1 rounded-xl border border-zinc-800"
+                className="flex items-center gap-1 sm:gap-1.5 bg-zinc-900/90 px-1.5 sm:px-2 py-1 rounded-xl border border-zinc-800"
                 title="Color de acordes para escenario"
               >
                 {(Object.keys(STAGE_COLORS) as StageColor[]).map(cKey => {
@@ -950,7 +1007,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                       key={cKey}
                       onClick={() => handleSelectStageColor(cKey)}
                       title={`Tema ${cfg.name}`}
-                      className={`w-5 h-5 rounded-full transition-all duration-150 cursor-pointer ${cfg.dotClass} ${
+                      className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full transition-all duration-150 cursor-pointer ${cfg.dotClass} ${
                         isSelected
                           ? `scale-125 ring-2 ring-white ${cfg.ringClass}`
                           : 'opacity-40 hover:opacity-100 hover:scale-110'
@@ -1100,7 +1157,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
       </header>
 
       {/* Optional Collapsible Metronome Bar under the Header */}
-      {showMetronome && (
+      {showMetronome && !stageMode && (
         <div className={`no-print sticky top-13 sm:top-14 z-30 backdrop-blur-md border-b shadow-md px-3 sm:px-4 py-2 ${
           stageMode ? 'bg-black/95 border-zinc-800/80 text-white' : 'bg-zinc-900/95 border-zinc-800 text-zinc-100'
         }`}>
@@ -1140,11 +1197,6 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                   {parsed.title || song.title}
                 </h1>
-                {stageMode && (
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black tracking-wider uppercase border ${colorConfig.badgeClass}`}>
-                    ⚡ Modo Zen · {colorConfig.label}
-                  </span>
-                )}
               </div>
               {(parsed.artist || song.artist) && (
                 <p className={`text-xs sm:text-sm font-medium mt-0.5 ${
