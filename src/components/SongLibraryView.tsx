@@ -61,33 +61,34 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans pb-16">
       {/* Top Hero / Header */}
       <header className="border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-20 flex items-center justify-between gap-2 sm:gap-3">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
             <img
               src="/logo.png"
               alt="Logo Lampei"
-              className="h-10 sm:h-12 w-auto object-contain shrink-0 drop-shadow-[0_2px_12px_rgba(16,185,129,0.4)] transition-transform hover:scale-105"
+              className="h-8 sm:h-11 w-auto object-contain shrink-0 drop-shadow-[0_2px_12px_rgba(16,185,129,0.4)] transition-transform hover:scale-105"
             />
-            <div>
-              <span className="font-black text-lg sm:text-xl tracking-tight text-white block leading-tight">
+            <div className="min-w-0">
+              <span className="font-black text-base sm:text-xl tracking-tight text-white block leading-tight truncate">
                 chords<span className={`transition-colors ${themeConfig.primaryText}`}>Lampei</span>
               </span>
-              <span className="text-[11px] text-zinc-400 font-medium hidden sm:inline">Repertorio Digital & Cifrados</span>
+              <span className="text-[10px] sm:text-[11px] text-zinc-400 font-medium hidden sm:inline">Repertorio Digital & Cifrados</span>
             </div>
           </div>
 
           {/* Action Buttons: Theme Selector + Nueva Canción */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <ThemeDropdown />
 
             <button
               onClick={onNewSong}
-              className={`px-3.5 sm:px-4 py-2 ${themeConfig.primaryButton} text-xs sm:text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-1.5 cursor-pointer active:scale-95`}
+              className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 ${themeConfig.primaryButton} text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1 sm:gap-1.5 cursor-pointer active:scale-95 shrink-0`}
               title="Crear una nueva canción"
             >
-              <Plus className="w-4 h-4" />
-              <span>Nueva Canción</span>
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Nueva Canción</span>
+              <span className="sm:hidden">Nueva</span>
             </button>
           </div>
         </div>
