@@ -158,6 +158,71 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     }
   }
 
+  // Broadcast scroll state to other components (e.g. SongViewer in Stage Mode)
+  useEffect(() => {
+    const broadcastState = () => {
+      window.dispatchEvent(
+        new CustomEvent('chords:scroll:state', {
+          detail: { isPlaying, mode, speed }
+        })
+      )
+    }
+
+    broadcastState()
+
+    const handleReqState = () => {
+      broadcastState()
+    }
+
+    window.addEventListener('chords:scroll:req-state', handleReqState)
+    return () => {
+      window.removeEventListener('chords:scroll:req-state', handleReqState)
+    }
+  }, [isPlaying, mode, speed])
+
+  // Listen to remote commands from Stage Mode
+  useEffect(() => {
+    const handleRemoteToggle = () => {
+      if (!isPlaying) {
+        accumulatedScrollRef.current = getScrollY()
+        lastTimeRef.current = performance.now()
+        setIsPlaying(true)
+      } else {
+        setIsPlaying(false)
+      }
+    }
+
+    const handleRemoteSetMode = (e: Event) => {
+      const custom = e as CustomEvent<ScrollMode>
+      if (custom.detail) {
+        setMode(custom.detail)
+      }
+    }
+
+    const handleRemoteSetSpeed = (e: Event) => {
+      const custom = e as CustomEvent<number>
+      if (typeof custom.detail === 'number') {
+        setSpeed(custom.detail)
+      }
+    }
+
+    const handleRemotePause = () => {
+      setIsPlaying(false)
+    }
+
+    window.addEventListener('chords:scroll:cmd-toggle', handleRemoteToggle)
+    window.addEventListener('chords:scroll:cmd-set-mode', handleRemoteSetMode)
+    window.addEventListener('chords:scroll:cmd-set-speed', handleRemoteSetSpeed)
+    window.addEventListener('chords:scroll:cmd-pause', handleRemotePause)
+
+    return () => {
+      window.removeEventListener('chords:scroll:cmd-toggle', handleRemoteToggle)
+      window.removeEventListener('chords:scroll:cmd-set-mode', handleRemoteSetMode)
+      window.removeEventListener('chords:scroll:cmd-set-speed', handleRemoteSetSpeed)
+      window.removeEventListener('chords:scroll:cmd-pause', handleRemotePause)
+    }
+  }, [isPlaying])
+
   // Track whether current section fits fully on screen or needs 1x overflow scroll
   const sectionScrollStateRef = useRef<{
     targetDomIndex: number

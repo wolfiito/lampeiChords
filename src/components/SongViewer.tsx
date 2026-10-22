@@ -443,79 +443,101 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     } catch {}
   }
 
-  const [isStageScrolling, setIsStageScrolling] = useState<boolean>(false)
-  const [stageScrollSpeed, setStageScrollSpeed] = useState<number>(1.0)
+  const [scrollState, setScrollState] = useState<{
+    isPlaying: boolean
+    mode: 'manual' | 'sections' | 'duration'
+    speed: number
+  }>({
+    isPlaying: false,
+    mode: 'manual',
+    speed: 1.0
+  })
+
+  const [isScrollMenuOpen, setIsScrollMenuOpen] = useState(false)
+  const [isColorMenuOpen, setIsColorMenuOpen] = useState(false)
+  const scrollMenuRef = useRef<HTMLDivElement>(null)
+  const colorMenuRef = useRef<HTMLDivElement>(null)
+
+  // Listen to global scroll state from AutoScrollControls
+  useEffect(() => {
+    const handleState = (e: Event) => {
+      const custom = e as CustomEvent<{
+        isPlaying: boolean
+        mode: 'manual' | 'sections' | 'duration'
+        speed: number
+      }>
+      if (custom.detail) {
+        setScrollState(custom.detail)
+      }
+    }
+    window.addEventListener('chords:scroll:state', handleState)
+    window.dispatchEvent(new CustomEvent('chords:scroll:req-state'))
+    return () => window.removeEventListener('chords:scroll:state', handleState)
+  }, [])
+
+  const handleToggleScroll = () => {
+    window.dispatchEvent(new CustomEvent('chords:scroll:cmd-toggle'))
+  }
+
+  const handleSetScrollMode = (newMode: 'manual' | 'sections') => {
+    window.dispatchEvent(new CustomEvent('chords:scroll:cmd-set-mode', { detail: newMode }))
+  }
+
+  const handleSetScrollSpeed = (newSpeed: number) => {
+    window.dispatchEvent(new CustomEvent('chords:scroll:cmd-set-speed', { detail: newSpeed }))
+  }
+
+  // Close menus on click outside
+  useEffect(() => {
+    if (!isScrollMenuOpen && !isColorMenuOpen) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (scrollMenuRef.current && !scrollMenuRef.current.contains(e.target as Node)) {
+        setIsScrollMenuOpen(false)
+      }
+      if (colorMenuRef.current && !colorMenuRef.current.contains(e.target as Node)) {
+        setIsColorMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isScrollMenuOpen, isColorMenuOpen])
 
   // Sync body class for stage mode and auto-scroll cleanup
   useEffect(() => {
     if (stageMode) {
       document.body.classList.add('stage-mode-active')
+      window.dispatchEvent(new CustomEvent('chords:scroll:req-state'))
     } else {
       document.body.classList.remove('stage-mode-active')
-      setIsStageScrolling(false)
+      setIsScrollMenuOpen(false)
+      setIsColorMenuOpen(false)
     }
     return () => {
       document.body.classList.remove('stage-mode-active')
     }
   }, [stageMode])
 
-  // Smooth continuous requestAnimationFrame auto-scroll for Stage Mode (no BPM)
+  // Escape key closes menus first, or exits Stage Mode
   useEffect(() => {
-    if (!stageMode || !isStageScrolling) return
-
-    let animId: number
-    let lastTime = performance.now()
-    // Base speed: 28 px/s at 1.0x
-    const baseSpeed = 28
-
-    const step = (now: number) => {
-      const dt = (now - lastTime) / 1000
-      lastTime = now
-
-      const maxScroll = Math.max(
-        0,
-        document.documentElement.scrollHeight - window.innerHeight
-      )
-
-      if (window.scrollY >= maxScroll - 2) {
-        setIsStageScrolling(false)
-        return
-      }
-
-      window.scrollBy({ top: baseSpeed * stageScrollSpeed * dt, behavior: 'instant' as ScrollBehavior })
-      animId = requestAnimationFrame(step)
-    }
-
-    animId = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(animId)
-  }, [stageMode, isStageScrolling, stageScrollSpeed])
-
-  // Spacebar toggles scroll in Stage Mode
-  useEffect(() => {
-    if (!stageMode) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && e.target === document.body) {
-        e.preventDefault()
-        setIsStageScrolling(prev => !prev)
+      if (e.key === 'Escape') {
+        if (isScrollMenuOpen || isColorMenuOpen) {
+          setIsScrollMenuOpen(false)
+          setIsColorMenuOpen(false)
+          return
+        }
+        if (stageMode) {
+          setStageMode(false)
+          try {
+            localStorage.setItem('chords_stage_mode', 'false')
+          } catch {}
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [stageMode])
-
-  // Escape key exits Stage Mode
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && stageMode) {
-        setStageMode(false)
-        try {
-          localStorage.setItem('chords_stage_mode', 'false')
-        } catch {}
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [stageMode])
+  }, [stageMode, isScrollMenuOpen, isColorMenuOpen])
 
   const [activeChordModal, setActiveChordModal] = useState<string | null>(null)
   const [preferredInstrument, setPreferredInstrument] = useState<'guitar' | 'bass'>(() => {
@@ -924,104 +946,221 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           /* =================================================== */
           /* MODO ESCENARIO: CERO DISTRACCIONES (SOLO SCROLL Y ✕)*/
           /* =================================================== */
-          <div className="max-w-6xl mx-auto px-2 sm:px-4 h-13 sm:h-14 flex items-center justify-between gap-2 sm:gap-3">
+          <div className="max-w-6xl mx-auto px-2 sm:px-4 h-13 sm:h-14 flex items-center justify-between gap-1.5 sm:gap-3">
             {/* Left: Botón ✕ para regresar */}
             <div className="flex items-center shrink-0">
               <button
                 onClick={handleToggleStageMode}
-                title="Regresar (o pulsa Escape)"
+                title="Regresar (Escape)"
                 className="px-2.5 sm:px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-bold rounded-xl border border-zinc-800 transition-all flex items-center gap-1.5 cursor-pointer select-none active:scale-95"
               >
                 <X className="w-4 h-4 text-rose-400" />
-                <span className="font-semibold text-xs">Regresar</span>
+                <span className="hidden sm:inline font-semibold text-xs">Regresar</span>
               </button>
             </div>
 
             {/* Center: Song Title */}
-            <div className="flex items-center justify-center flex-1 min-w-0 px-2 truncate">
-              <span className="text-sm sm:text-base font-extrabold text-zinc-200 truncate tracking-tight">
+            <div className="flex items-center justify-center flex-1 min-w-0 px-1 sm:px-2 truncate">
+              <span className="text-xs sm:text-sm md:text-base font-extrabold text-zinc-200 truncate tracking-tight">
                 {song.title}
               </span>
             </div>
 
-            {/* Right: Scroll (sin BPM) + Colores + Pantalla Completa */}
-            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-              {/* Botón Auto-Scroll Integrado (Sin BPM) */}
-              <div className="flex items-center bg-zinc-900/90 p-0.5 sm:p-1 rounded-xl border border-zinc-800">
-                <button
-                  onClick={() => setIsStageScrolling(s => !s)}
-                  title={isStageScrolling ? 'Pausar auto-scroll (Espacio)' : 'Iniciar auto-scroll (Espacio)'}
-                  className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer select-none ${
-                    isStageScrolling
-                      ? 'bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/30 animate-pulse'
-                      : `${colorConfig.badgeClass} hover:brightness-125`
-                  }`}
-                >
-                  {isStageScrolling ? (
-                    <>
-                      <Pause className="w-3.5 h-3.5 fill-current" />
-                      <span>Pausar</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>Scroll</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Velocidad: - 1.0x + (Sin BPM) */}
-                <div className="flex items-center pl-1 pr-0.5 gap-0.5">
+            {/* Right: Scroll (Sección o Velocidad) + Colores (Menú) + Pantalla Completa */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Controles de Auto-Scroll en Escenario */}
+              <div className="relative" ref={scrollMenuRef}>
+                <div className="flex items-center bg-zinc-900/90 p-0.5 rounded-xl border border-zinc-800 shadow-sm">
+                  {/* Botón Principal: Play / Pause */}
                   <button
-                    type="button"
-                    onClick={() => setStageScrollSpeed(s => Math.max(0.3, Math.round((s - 0.2) * 10) / 10))}
-                    title="Reducir velocidad de scroll"
-                    className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition cursor-pointer"
+                    onClick={handleToggleScroll}
+                    title={scrollState.isPlaying ? 'Pausar scroll (Espacio)' : 'Iniciar scroll (Espacio)'}
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer select-none active:scale-95 ${
+                      scrollState.isPlaying
+                        ? 'bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/30 animate-pulse'
+                        : `${colorConfig.badgeClass} hover:brightness-125`
+                    }`}
                   >
-                    -
+                    {scrollState.isPlaying ? (
+                      <>
+                        <Pause className="w-3.5 h-3.5 fill-current" />
+                        <span className="text-xs">Pausar</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span className="text-xs">Scroll</span>
+                      </>
+                    )}
                   </button>
-                  <span className="text-[10px] sm:text-[11px] font-mono font-bold text-zinc-300 min-w-[2rem] sm:min-w-[2.2rem] text-center select-none">
-                    {stageScrollSpeed.toFixed(1)}x
-                  </span>
+
+                  {/* Selector Desplegable de Modo: Sección vs Velocidad */}
                   <button
                     type="button"
-                    onClick={() => setStageScrollSpeed(s => Math.min(4.0, Math.round((s + 0.2) * 10) / 10))}
-                    title="Aumentar velocidad de scroll"
-                    className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition cursor-pointer"
+                    onClick={() => {
+                      setIsScrollMenuOpen(o => !o)
+                      setIsColorMenuOpen(false)
+                    }}
+                    title="Elegir scroll por sección o por velocidad"
+                    className="flex items-center gap-1 px-1.5 sm:px-2 py-1.5 text-zinc-300 hover:text-white rounded-lg hover:bg-zinc-800 transition cursor-pointer text-xs font-bold"
                   >
-                    +
+                    <span className="text-[11px] text-zinc-300">
+                      {scrollState.mode === 'sections' ? '⚡ Sección' : `${scrollState.speed.toFixed(1)}x`}
+                    </span>
+                    <ChevronDown className="w-3 h-3 text-zinc-400" />
                   </button>
                 </div>
+
+                {/* Menú Desplegable: Por Sección vs Por Velocidad */}
+                {isScrollMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-64 sm:w-72 bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/80 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-400 border-b border-zinc-800/80 mb-2">
+                      Modo de Auto-Scroll
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {/* Opción 1: Por Sección */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSetScrollMode('sections')
+                          setIsScrollMenuOpen(false)
+                        }}
+                        className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer border ${
+                          scrollState.mode === 'sections'
+                            ? 'bg-zinc-800 text-white border-zinc-600 shadow-sm'
+                            : 'text-zinc-300 hover:bg-zinc-800/60 hover:text-white border-transparent'
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-extrabold flex items-center gap-1.5 text-xs">
+                            <span>⚡</span> Por Sección
+                          </span>
+                          <span className="text-[10px] text-zinc-400 font-normal mt-0.5">
+                            Avanza automáticamente según cada parte de la canción
+                          </span>
+                        </div>
+                        {scrollState.mode === 'sections' && (
+                          <span className="text-xs text-white font-bold ml-1.5">✓</span>
+                        )}
+                      </button>
+
+                      {/* Opción 2: Por Velocidad */}
+                      <div className={`p-2.5 rounded-xl border transition ${
+                        scrollState.mode === 'manual'
+                          ? 'bg-zinc-800 text-white border-zinc-600 shadow-sm'
+                          : 'hover:bg-zinc-800/60 border-transparent'
+                      }`}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSetScrollMode('manual')
+                          }}
+                          className="w-full text-left text-xs font-bold transition flex items-center justify-between cursor-pointer mb-2"
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-extrabold flex items-center gap-1.5 text-xs">
+                              <span>🏎</span> Por Velocidad
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-normal mt-0.5">
+                              Desplazamiento continuo constante
+                            </span>
+                          </div>
+                          {scrollState.mode === 'manual' && (
+                            <span className="text-xs text-white font-bold ml-1.5">✓</span>
+                          )}
+                        </button>
+
+                        {/* Ajuste de velocidad (- 1.0x +) */}
+                        <div className="flex items-center justify-between bg-zinc-950/80 px-2 py-1.5 rounded-lg border border-zinc-700/80">
+                          <span className="text-[11px] text-zinc-400 font-medium">Velocidad:</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleSetScrollSpeed(Math.max(0.2, Math.round((scrollState.speed - 0.2) * 10) / 10))
+                              }}
+                              className="w-6 h-6 flex items-center justify-center font-bold text-zinc-300 hover:text-white hover:bg-zinc-800 rounded transition cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <span className="text-xs font-mono font-bold text-emerald-400 min-w-[2.2rem] text-center select-none">
+                              {scrollState.speed.toFixed(1)}x
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleSetScrollSpeed(Math.min(5.0, Math.round((scrollState.speed + 0.2) * 10) / 10))
+                              }}
+                              className="w-6 h-6 flex items-center justify-center font-bold text-zinc-300 hover:text-white hover:bg-zinc-800 rounded transition cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Selector Rápido de Colores */}
-              <div
-                className="flex items-center gap-1 sm:gap-1.5 bg-zinc-900/90 px-1.5 sm:px-2 py-1 rounded-xl border border-zinc-800"
-                title="Color de acordes para escenario"
-              >
-                {(Object.keys(STAGE_COLORS) as StageColor[]).map(cKey => {
-                  const cfg = STAGE_COLORS[cKey]
-                  const isSelected = stageColor === cKey
-                  return (
-                    <button
-                      key={cKey}
-                      onClick={() => handleSelectStageColor(cKey)}
-                      title={`Tema ${cfg.name}`}
-                      className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full transition-all duration-150 cursor-pointer ${cfg.dotClass} ${
-                        isSelected
-                          ? `scale-125 ring-2 ring-white ${cfg.ringClass}`
-                          : 'opacity-40 hover:opacity-100 hover:scale-110'
-                      }`}
-                    />
-                  )
-                })}
+              {/* Selector de Colores (Menú Desplegable) */}
+              <div className="relative" ref={colorMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsColorMenuOpen(o => !o)
+                    setIsScrollMenuOpen(false)
+                  }}
+                  title="Cambiar color de acordes"
+                  className="flex items-center gap-1.5 bg-zinc-900/90 hover:bg-zinc-800 px-2 sm:px-2.5 py-1.5 rounded-xl border border-zinc-800 text-xs font-bold text-zinc-300 transition cursor-pointer select-none active:scale-95"
+                >
+                  <span className={`w-3.5 h-3.5 rounded-full shrink-0 ${colorConfig.dotClass} ${colorConfig.ringClass}`} />
+                  <span className="hidden md:inline text-xs font-medium text-zinc-200">{colorConfig.label}</span>
+                  <ChevronDown className="w-3 h-3 text-zinc-400" />
+                </button>
+
+                {isColorMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-52 sm:w-60 bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/80 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-zinc-400 border-b border-zinc-800/80 mb-1">
+                      Paleta de Colores
+                    </div>
+                    {(Object.keys(STAGE_COLORS) as StageColor[]).map(cKey => {
+                      const cfg = STAGE_COLORS[cKey]
+                      const isSelected = stageColor === cKey
+                      return (
+                        <button
+                          key={cKey}
+                          type="button"
+                          onClick={() => {
+                            handleSelectStageColor(cKey)
+                            setIsColorMenuOpen(false)
+                          }}
+                          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                            isSelected
+                              ? 'bg-zinc-800 text-white'
+                              : 'text-zinc-300 hover:bg-zinc-800/60 hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className={`w-3.5 h-3.5 rounded-full shrink-0 ${cfg.dotClass} ${isSelected ? cfg.ringClass : ''}`} />
+                            <span className="truncate">{cfg.name}</span>
+                          </div>
+                          {isSelected && <span className="text-xs text-white font-bold ml-1">✓</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Pantalla Completa */}
               <button
                 onClick={toggleFullscreen}
                 title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa para atril'}
-                className="p-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl border border-zinc-800 transition cursor-pointer"
+                className="p-1.5 sm:p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl border border-zinc-800 transition cursor-pointer active:scale-95"
               >
                 {isFullscreen ? <Minimize className="w-4 h-4 text-white" /> : <Maximize className="w-4 h-4 text-white" />}
               </button>
