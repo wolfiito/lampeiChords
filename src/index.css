@@ -141,8 +141,4 @@ html[data-theme="green"] ::selection {
   }
 }
 
-/* Hide floating autoscroll pill in stage mode */
-body.stage-mode-active .stage-auto-scroll-hide {
-  display: none !important;
-}
 

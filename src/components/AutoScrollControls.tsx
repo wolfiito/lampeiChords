@@ -149,7 +149,8 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   // Play / Pause toggle
   const togglePlay = () => {
     if (!isPlaying) {
-      // Starting
+      // Starting independent scroll
+      lastYtSyncRef.current = 0
       accumulatedScrollRef.current = getScrollY()
       lastTimeRef.current = performance.now()
       setIsPlaying(true)
@@ -185,6 +186,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   useEffect(() => {
     const handleRemoteToggle = () => {
       if (!isPlaying) {
+        lastYtSyncRef.current = 0
         accumulatedScrollRef.current = getScrollY()
         lastTimeRef.current = performance.now()
         setIsPlaying(true)
@@ -208,6 +210,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     }
 
     const handleRemotePause = () => {
+      lastYtSyncRef.current = 0
       setIsPlaying(false)
     }
 
@@ -565,7 +568,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   return (
     <aside
       aria-label="Controles de Auto-Scroll Inteligente"
-      className="no-print fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 flex flex-col items-end gap-2 max-w-[96vw] stage-auto-scroll-hide"
+      className="no-print fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 flex flex-col items-end gap-2 max-w-[96vw]"
     >
       {/* Expanded Control Panel */}
       {isExpanded && (

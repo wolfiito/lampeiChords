@@ -277,7 +277,7 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
     return () => clearInterval(interval)
   }, [isPlaying])
 
-  // Two-way synchronization: Listen to app-level scroll toggle/pause (e.g. Spacebar or AutoScrollControls)
+  // Two-way synchronization: If YouTube is currently playing, pause it when scroll is paused/toggled
   useEffect(() => {
     const handleRemoteScrollToggle = () => {
       if (isSyncingFromApiRef.current) return
@@ -285,8 +285,6 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
       try {
         if (isPlaying) {
           playerRef.current.pauseVideo()
-        } else {
-          playerRef.current.playVideo()
         }
       } catch {}
     }
@@ -301,24 +299,12 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
       } catch {}
     }
 
-    const handleRemoteScrollPlay = () => {
-      if (isSyncingFromApiRef.current) return
-      if (!playerRef.current) return
-      try {
-        if (!isPlaying) {
-          playerRef.current.playVideo()
-        }
-      } catch {}
-    }
-
     window.addEventListener('chords:scroll:cmd-toggle', handleRemoteScrollToggle)
     window.addEventListener('chords:scroll:cmd-pause', handleRemoteScrollPause)
-    window.addEventListener('chords:scroll:cmd-play', handleRemoteScrollPlay)
 
     return () => {
       window.removeEventListener('chords:scroll:cmd-toggle', handleRemoteScrollToggle)
       window.removeEventListener('chords:scroll:cmd-pause', handleRemoteScrollPause)
-      window.removeEventListener('chords:scroll:cmd-play', handleRemoteScrollPlay)
     }
   }, [isPlaying])
 
@@ -813,7 +799,7 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
             <div className="flex items-center gap-1.5 font-medium text-[11px]">
               <span className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-emerald-400 animate-ping' : 'bg-zinc-500'}`} />
               <span className={isPlaying ? 'text-emerald-400 font-bold' : 'text-zinc-400'}>
-                {isPlaying ? 'Auto-Scroll sincronizado activo' : 'Dale Play al video para iniciar'}
+                {isPlaying ? 'Sincronizado con el video' : 'Sincronización lista (o usa scroll independiente)'}
               </span>
             </div>
 
