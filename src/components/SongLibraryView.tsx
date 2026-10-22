@@ -8,7 +8,8 @@ import {
   Download,
   Play,
   Edit3,
-  Tag
+  Tag,
+  Radio
 } from 'lucide-react'
 import type { Song } from '../types/song'
 import { useTheme } from '../context/ThemeContext'
@@ -23,6 +24,7 @@ interface SongLibraryViewProps {
   onDeleteSong: (id: string) => void
   onOpenImportModal?: () => void
   onExportLibrary: () => void
+  onOpenTuner?: () => void
 }
 
 export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
@@ -32,7 +34,8 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
   onEditSong,
   onDuplicateSong,
   onDeleteSong,
-  onExportLibrary
+  onExportLibrary,
+  onOpenTuner
 }) => {
   const { themeConfig } = useTheme()
   const [searchTerm, setSearchTerm] = useState('')
@@ -75,6 +78,26 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
               </span>
               <span className="text-[10px] sm:text-[11px] text-zinc-400 font-medium hidden sm:inline">Repertorio Digital & Cifrados</span>
             </div>
+          </div>
+
+          {/* Module Navigation Tabs (Canciones vs Afinador) */}
+          <div className="flex items-center bg-zinc-950 p-1 rounded-2xl border border-zinc-800 shrink-0">
+            <button
+              type="button"
+              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${themeConfig.primaryBg} text-white shadow`}
+            >
+              <Music className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Canciones</span>
+            </button>
+            <button
+              type="button"
+              onClick={onOpenTuner}
+              className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition flex items-center gap-1.5 cursor-pointer"
+              title="Abrir Afinador de Guitarra y Bajo"
+            >
+              <Radio className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Afinador</span>
+            </button>
           </div>
 
           {/* Action Buttons: Theme Selector + Nueva Canción */}

@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { Music, Radio } from 'lucide-react'
 import { useSongs } from './hooks/useSongs'
 import { Navbar } from './components/Navbar'
 import { SongViewer } from './components/SongViewer'
@@ -7,9 +8,13 @@ import { SongList } from './components/SongList'
 import { SongLibraryView } from './components/SongLibraryView'
 import { ImportModal } from './components/ImportModal'
 import { AutoScrollControls } from './components/AutoScrollControls'
+import { Tuner } from './components/Tuner'
+import { ThemeDropdown } from './components/ThemeDropdown'
+import { useTheme } from './context/ThemeContext'
 import type { Song } from './types/song'
 
 export function App() {
+  const { themeConfig } = useTheme()
   const {
     songs,
     activeSong,
@@ -23,7 +28,7 @@ export function App() {
   } = useSongs()
 
   // App starts on the Repertoire catalog ('library') instead of jumping straight into a song!
-  const [viewMode, setViewMode] = useState<'library' | 'viewer' | 'editor'>('library')
+  const [viewMode, setViewMode] = useState<'library' | 'tuner' | 'viewer' | 'editor'>('library')
   const [draftSong, setDraftSong] = useState<Song | null>(null)
   const [isLibraryOpen, setIsLibraryOpen] = useState(false)
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -55,10 +60,71 @@ export function App() {
   // Current song being edited: if it's a new song draft, use draftSong; otherwise activeSong
   const songToEdit = draftSong || activeSong
 
-  // 1. Repertoire Dashboard (Home view when entering the app)
+  // 1. Tuner View
+  if (viewMode === 'tuner') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans pb-16">
+        {/* Top Header matching home */}
+        <header className="border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-md sticky top-0 z-20">
+          <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
+            {/* Logo & Brand */}
+            <div
+              onClick={() => setViewMode('library')}
+              className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0 cursor-pointer hover:opacity-90 transition"
+              title="Volver a Canciones"
+            >
+              <img
+                src="/logo.png"
+                alt="Logo Lampei"
+                className="h-8 sm:h-11 w-auto object-contain shrink-0 drop-shadow-[0_2px_12px_rgba(16,185,129,0.4)] transition-transform hover:scale-105"
+              />
+              <div className="min-w-0">
+                <span className="font-black text-base sm:text-xl tracking-tight text-white block leading-tight truncate">
+                  chords<span className={`transition-colors ${themeConfig.primaryText}`}>Lampei</span>
+                </span>
+                <span className="text-[10px] sm:text-[11px] text-zinc-400 font-medium hidden sm:inline">Repertorio Digital & Cifrados</span>
+              </div>
+            </div>
+
+            {/* Module Navigation Tabs */}
+            <div className="flex items-center bg-zinc-950 p-1 rounded-2xl border border-zinc-800 shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewMode('library')}
+                className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition flex items-center gap-1.5 cursor-pointer"
+                title="Ver catálogo de canciones"
+              >
+                <Music className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Canciones</span>
+              </button>
+              <button
+                type="button"
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${themeConfig.primaryBg} text-white shadow`}
+              >
+                <Radio className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Afinador</span>
+              </button>
+            </div>
+
+            {/* Theme Dropdown */}
+            <div className="flex items-center gap-2 shrink-0">
+              <ThemeDropdown />
+            </div>
+          </div>
+        </header>
+
+        {/* Tuner Screen Component */}
+        <main className="flex-1">
+          <Tuner onBackToLibrary={() => setViewMode('library')} />
+        </main>
+      </div>
+    )
+  }
+
+  // 2. Repertoire Dashboard (Home view when entering the app)
   if (viewMode === 'library' || (!activeSong && !draftSong)) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans">
         <SongLibraryView
           songs={songs}
           onSelectSong={id => {
@@ -76,6 +142,7 @@ export function App() {
           onDeleteSong={deleteSong}
           onOpenImportModal={() => setIsImportOpen(true)}
           onExportLibrary={exportLibrary}
+          onOpenTuner={() => setViewMode('tuner')}
         />
 
         {/* Smart Import Modal */}
@@ -160,6 +227,7 @@ export function App() {
               setViewMode('library')
             }}
             onOpenLibrary={() => setIsLibraryOpen(true)}
+            onOpenTuner={() => setViewMode('tuner')}
             activeSectionIndex={activeSectionIndex}
           />
         ) : null}

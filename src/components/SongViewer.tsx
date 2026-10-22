@@ -17,7 +17,8 @@ import {
   Sliders,
   BookOpen,
   Play,
-  Pause
+  Pause,
+  Radio
 } from 'lucide-react'
 import type { Song, NotationSystem, ParsedLine, ChordSegment } from '../types/song'
 import { parseChordPro } from '../music/chordPro'
@@ -46,6 +47,7 @@ interface SongViewerProps {
   onClosePrint?: () => void
   onBackToLibrary?: () => void
   onOpenLibrary?: () => void
+  onOpenTuner?: () => void
   activeSectionIndex?: number
 }
 
@@ -282,6 +284,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   onClosePrint,
   onBackToLibrary,
   onOpenLibrary,
+  onOpenTuner,
   activeSectionIndex = -1
 }) => {
   // Individual local capo for this user/device (stored locally per song)
@@ -1473,21 +1476,34 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 </div>
               </div>
 
-              {/* Group 6: Quick Link to Library */}
-              {onOpenLibrary && (
-                <div className="pt-2">
+              {/* Group 6: Quick Links (Tuner & Library) */}
+              <div className="pt-2 space-y-2">
+                {onOpenTuner && (
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false)
+                      onOpenTuner()
+                    }}
+                    className="w-full py-2.5 px-3 bg-zinc-950 hover:bg-zinc-850 text-zinc-200 hover:text-white font-bold text-xs rounded-xl border border-zinc-800 transition flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  >
+                    <Radio className={`w-4 h-4 ${colorConfig.primaryText}`} />
+                    <span>Afinador de Guitarra y Bajo</span>
+                  </button>
+                )}
+
+                {onOpenLibrary && (
                   <button
                     onClick={() => {
                       setIsMenuOpen(false)
                       onOpenLibrary()
                     }}
-                    className="w-full py-2.5 px-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-xs rounded-xl border border-zinc-700 transition flex items-center justify-center gap-2"
+                    className="w-full py-2.5 px-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-xs rounded-xl border border-zinc-700 transition flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <BookOpen className={`w-4 h-4 ${colorConfig.primaryText}`} />
                     <span>Ver Catálogo de Canciones</span>
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Drawer Footer */}
