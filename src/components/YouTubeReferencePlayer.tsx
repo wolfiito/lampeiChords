@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   X,
   Minimize2,
@@ -8,11 +8,21 @@ import {
   Play,
   Pause,
   Check,
-  AlertCircle
+  AlertCircle,
+  GripHorizontal,
+  Pin,
+  PinOff
 } from 'lucide-react'
 import { YouTubeIcon } from './YouTubeIcon'
-import { parseYouTubeUrl, buildYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '../music/youtubeUtils'
-import { useTheme } from '../context/ThemeContext'
+import { parseYouTubeUrl, getYouTubeThumbnailUrl } from '../music/youtubeUtils'
+
+// Global declaration for YouTube IFrame API
+declare global {
+  interface Window {
+    YT: any
+    onYouTubeIframeAPIReady: () => void
+  }
+}
 
 interface YouTubeReferencePlayerProps {
   songTitle: string
@@ -23,17 +33,52 @@ interface YouTubeReferencePlayerProps {
   stageMode?: boolean
 }
 
+function loadYouTubeIframeApi(): Promise<void> {
+  return new Promise(resolve => {
+    if (typeof window !== 'undefined' && window.YT && window.YT.Player) {
+      resolve()
+      return
+    }
+
+    if (!document.getElementById('youtube-iframe-api-script')) {
+      const tag = document.createElement('script')
+      tag.id = 'youtube-iframe-api-script'
+      tag.src = 'https://www.youtube.com/iframe_api'
+      const firstScriptTag = document.getElementsByTagName('script')[0]
+      firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag)
+    }
+
+    const prevReady = window.onYouTubeIframeAPIReady
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof prevReady === 'function') prevReady()
+      resolve()
+    }
+
+    const interval = setInterval(() => {
+      if (window.YT && window.YT.Player) {
+        clearInterval(interval)
+        resolve()
+      }
+    }, 100)
+  })
+}
+
+function formatDuration(sec: number): string {
+  if (isNaN(sec) || sec < 0) return '0:00'
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60)
+  return `${m}:${s < 10 ? '0' : ''}${s}`
+}
+
 export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
   songTitle,
   youtubeUrl,
   isOpen,
   onClose,
   onUpdateUrl,
-  stageMode: _stageMode = false
+  stageMode = false
 }) => {
-  const { themeConfig } = useTheme()
-
-  // Player view mode: 'expanded' (full video), 'minimized' (compact audio pill)
+  // Video view mode: 'expanded' vs 'minimized'
   const [isMinimized, setIsMinimized] = useState<boolean>(() => {
     try {
       return localStorage.getItem('chords_yt_minimized') === 'true'
@@ -42,46 +87,317 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
     }
   })
 
-  // URL editing modal state
+  // Docked at top (especially for Stage Mode or user preference)
+  const [isDockedTop, setIsDockedTop] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('chords_yt_docked_top')
+      if (saved !== null) return saved === 'true'
+      return stageMode
+    } catch {
+      return stageMode
+    }
+  })
+
+  // Keep in sync with stageMode changes
+  useEffect(() => {
+    if (stageMode) {
+      setIsDockedTop(true)
+    }
+  }, [stageMode])
+
+  // Drag position for floating mode (avoiding bottom-right collision with AutoScrollControls)
+  const [position, setPosition] = useState<{ x: number; y: number }>(() => {
+    try {
+      const saved = localStorage.getItem('chords_yt_pos')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return parsed
+        }
+      }
+    } catch {}
+    return { x: 16, y: 76 }
+  })
+
+  const [isDragging, setIsDragging] = useState<boolean>(false)
+  const dragStartRef = useRef<{ startX: number; startY: number; mouseX: number; mouseY: number }>({
+    startX: 0,
+    startY: 0,
+    mouseX: 0,
+    mouseY: 0
+  })
+
+  // URL edit modal state
   const [isEditingUrl, setIsEditingUrl] = useState<boolean>(!youtubeUrl)
   const [urlInput, setUrlInput] = useState<string>(youtubeUrl || '')
   const [inputError, setInputError] = useState<string | null>(null)
 
-  // Auto-scroll sync toggle
-  const [syncScroll, setSyncScroll] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('chords_yt_sync_scroll') !== 'false'
-    } catch {
-      return true
-    }
-  })
+  // YouTube Player instance & playback status
+  const playerRef = useRef<any>(null)
+  const [isPlaying, setIsPlaying] = useState<boolean>(false)
+  const [currentTime, setCurrentTime] = useState<number>(0)
+  const [duration, setDuration] = useState<number>(0)
+  const lastSyncTimeRef = useRef<number>(0)
+  const isSyncingFromApiRef = useRef<boolean>(false)
 
-  // Global scroll state
-  const [isScrollPlaying, setIsScrollPlaying] = useState<boolean>(false)
+  const parsed = parseYouTubeUrl(youtubeUrl)
+  const playerId = 'chords-yt-iframe-player'
 
+  // Initialize or reload YouTube player when video ID changes
   useEffect(() => {
-    const handleScrollState = (e: Event) => {
-      const custom = e as CustomEvent<{ isPlaying: boolean }>
-      if (custom.detail) {
-        setIsScrollPlaying(custom.detail.isPlaying)
+    if (!isOpen || !parsed.videoId) return
+
+    let isSubscribed = true
+
+    loadYouTubeIframeApi().then(() => {
+      if (!isSubscribed) return
+
+      // If player already exists, check if video changed
+      if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
+        try {
+          const currentVideoData = playerRef.current.getVideoData?.()
+          if (currentVideoData?.video_id !== parsed.videoId) {
+            playerRef.current.loadVideoById({
+              videoId: parsed.videoId,
+              startSeconds: parsed.startTime || 0
+            })
+          }
+        } catch {}
+        return
+      }
+
+      // Create new YT.Player instance
+      try {
+        new window.YT.Player(playerId, {
+          videoId: parsed.videoId,
+          playerVars: {
+            autoplay: 0,
+            playsinline: 1,
+            rel: 0,
+            modestbranding: 1,
+            enablejsapi: 1,
+            origin: window.location.origin,
+            start: parsed.startTime || 0
+          },
+          events: {
+            onReady: (event: any) => {
+              if (!isSubscribed) return
+              playerRef.current = event.target
+              try {
+                const dur = event.target.getDuration()
+                if (dur > 0) setDuration(dur)
+              } catch {}
+            },
+            onStateChange: (event: any) => {
+              if (!isSubscribed) return
+              const state = event.data
+              // 1: PLAYING
+              if (state === 1) {
+                setIsPlaying(true)
+                isSyncingFromApiRef.current = true
+                let cur = 0
+                let dur = 0
+                try {
+                  cur = event.target.getCurrentTime() || 0
+                  dur = event.target.getDuration() || 0
+                } catch {}
+                window.dispatchEvent(
+                  new CustomEvent('chords:scroll:cmd-play', {
+                    detail: { currentTime: cur, duration: dur }
+                  })
+                )
+                if (dur > 0) {
+                  window.dispatchEvent(
+                    new CustomEvent('chords:scroll:sync-time', {
+                      detail: { currentTime: cur, duration: dur }
+                    })
+                  )
+                }
+                setTimeout(() => {
+                  isSyncingFromApiRef.current = false
+                }, 300)
+              }
+              // 2: PAUSED or 0: ENDED
+              else if (state === 2 || state === 0) {
+                setIsPlaying(false)
+                isSyncingFromApiRef.current = true
+                window.dispatchEvent(new CustomEvent('chords:scroll:cmd-pause'))
+                setTimeout(() => {
+                  isSyncingFromApiRef.current = false
+                }, 300)
+              }
+            }
+          }
+        })
+      } catch (err) {
+        console.warn('Error instantiating YouTube player:', err)
+      }
+    })
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [isOpen, parsed.videoId])
+
+  // Periodic time tracker while playing: syncs scroll position when video scrubs or progresses
+  useEffect(() => {
+    if (!isPlaying) return
+
+    const interval = setInterval(() => {
+      if (!playerRef.current || typeof playerRef.current.getCurrentTime !== 'function') return
+      try {
+        const cur = playerRef.current.getCurrentTime()
+        const dur = playerRef.current.getDuration()
+
+        if (dur > 0) {
+          setCurrentTime(cur)
+          setDuration(dur)
+
+          // Broadcast sync event so lyrics stay in exact sync with YouTube audio
+          window.dispatchEvent(
+            new CustomEvent('chords:scroll:sync-time', {
+              detail: { currentTime: cur, duration: dur }
+            })
+          )
+
+          // Fallback direct smooth scroll if time jumped significantly (seek/scrub)
+          const delta = Math.abs(cur - lastSyncTimeRef.current)
+          if (delta > 1.5) {
+            const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight
+            if (scrollableHeight > 0) {
+              const targetY = (cur / dur) * scrollableHeight
+              window.scrollTo({ top: targetY, behavior: 'smooth' })
+            }
+          }
+          lastSyncTimeRef.current = cur
+        }
+      } catch {}
+    }, 150)
+
+    return () => clearInterval(interval)
+  }, [isPlaying])
+
+  // Two-way synchronization: Listen to app-level scroll toggle/pause (e.g. Spacebar or AutoScrollControls)
+  useEffect(() => {
+    const handleRemoteScrollToggle = () => {
+      if (isSyncingFromApiRef.current) return
+      if (!playerRef.current) return
+      try {
+        if (isPlaying) {
+          playerRef.current.pauseVideo()
+        } else {
+          playerRef.current.playVideo()
+        }
+      } catch {}
+    }
+
+    const handleRemoteScrollPause = () => {
+      if (isSyncingFromApiRef.current) return
+      if (!playerRef.current) return
+      try {
+        if (isPlaying) {
+          playerRef.current.pauseVideo()
+        }
+      } catch {}
+    }
+
+    const handleRemoteScrollPlay = () => {
+      if (isSyncingFromApiRef.current) return
+      if (!playerRef.current) return
+      try {
+        if (!isPlaying) {
+          playerRef.current.playVideo()
+        }
+      } catch {}
+    }
+
+    window.addEventListener('chords:scroll:cmd-toggle', handleRemoteScrollToggle)
+    window.addEventListener('chords:scroll:cmd-pause', handleRemoteScrollPause)
+    window.addEventListener('chords:scroll:cmd-play', handleRemoteScrollPlay)
+
+    return () => {
+      window.removeEventListener('chords:scroll:cmd-toggle', handleRemoteScrollToggle)
+      window.removeEventListener('chords:scroll:cmd-pause', handleRemoteScrollPause)
+      window.removeEventListener('chords:scroll:cmd-play', handleRemoteScrollPlay)
+    }
+  }, [isPlaying])
+
+  // Cleanup player on unmount
+  useEffect(() => {
+    return () => {
+      if (playerRef.current) {
+        try {
+          playerRef.current.destroy()
+        } catch {}
+        playerRef.current = null
       }
     }
-    window.addEventListener('chords:scroll:state', handleScrollState)
-    window.dispatchEvent(new CustomEvent('chords:scroll:req-state'))
-    return () => window.removeEventListener('chords:scroll:state', handleScrollState)
   }, [])
 
-  // Sync state when song youtubeUrl changes
-  useEffect(() => {
-    setUrlInput(youtubeUrl || '')
-    if (!youtubeUrl) {
-      setIsEditingUrl(true)
-    } else {
-      setIsEditingUrl(false)
+  // Drag handlers
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button, a, input, select')) return
+    e.preventDefault()
+    setIsDragging(true)
+    dragStartRef.current = {
+      startX: position.x,
+      startY: position.y,
+      mouseX: e.clientX,
+      mouseY: e.clientY
     }
-  }, [youtubeUrl])
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
 
-  // Save minimized preference
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return
+    const dx = e.clientX - dragStartRef.current.mouseX
+    const dy = e.clientY - dragStartRef.current.mouseY
+
+    const playerWidth = isMinimized ? 280 : Math.min(380, window.innerWidth - 32)
+    const playerHeight = isMinimized ? 52 : 280
+
+    const maxX = Math.max(0, window.innerWidth - playerWidth - 10)
+    const maxY = Math.max(0, window.innerHeight - playerHeight - 10)
+
+    const newX = Math.max(10, Math.min(maxX, dragStartRef.current.startX + dx))
+    const newY = Math.max(10, Math.min(maxY, dragStartRef.current.startY + dy))
+
+    setPosition({ x: newX, y: newY })
+  }
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (isDragging) {
+      setIsDragging(false)
+      try {
+        localStorage.setItem('chords_yt_pos', JSON.stringify(position))
+      } catch {}
+      try {
+        ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+      } catch {}
+    }
+  }
+
+  const togglePlayPause = () => {
+    if (!playerRef.current) return
+    try {
+      if (isPlaying) {
+        playerRef.current.pauseVideo()
+      } else {
+        playerRef.current.playVideo()
+      }
+    } catch {}
+  }
+
+  const toggleDockTop = () => {
+    setIsDockedTop(prev => {
+      const next = !prev
+      try {
+        localStorage.setItem('chords_yt_docked_top', String(next))
+      } catch {}
+      return next
+    })
+  }
+
   const toggleMinimized = () => {
     setIsMinimized(prev => {
       const next = !prev
@@ -92,18 +408,16 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
     })
   }
 
-  // Save sync preference
-  const toggleSyncScroll = () => {
-    setSyncScroll(prev => {
-      const next = !prev
+  const handleClose = () => {
+    if (playerRef.current) {
       try {
-        localStorage.setItem('chords_yt_sync_scroll', String(next))
+        playerRef.current.pauseVideo()
       } catch {}
-      return next
-    })
+    }
+    setIsPlaying(false)
+    window.dispatchEvent(new CustomEvent('chords:scroll:cmd-pause'))
+    onClose()
   }
-
-  const parsed = parseYouTubeUrl(youtubeUrl)
 
   const handleSaveUrl = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -126,16 +440,12 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
     setIsEditingUrl(false)
   }
 
-  const handleToggleScrollFromPlayer = () => {
-    window.dispatchEvent(new CustomEvent('chords:scroll:cmd-toggle'))
-  }
-
   if (!isOpen) return null
 
-  // 1. Edit URL Modal (displayed when user has not set a URL yet or clicks edit)
+  // 1. Modal to configure/paste YouTube link
   if (isEditingUrl || !parsed.videoId) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
         <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-5 sm:p-6 shadow-2xl relative text-zinc-100">
           <button
             onClick={() => {
@@ -157,7 +467,7 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
             </div>
             <div>
               <h3 className="font-extrabold text-base text-white">Audio o Video de Referencia</h3>
-              <p className="text-xs text-zinc-400">Escucha la versión original mientras practicas</p>
+              <p className="text-xs text-zinc-400">Escucha la versión original sincronizada con tu letra</p>
             </div>
           </div>
 
@@ -178,7 +488,7 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
                 className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-700/80 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 transition"
               />
               <p className="text-[11px] text-zinc-500 mt-1.5">
-                Puedes pegar cualquier enlace de YouTube o YouTube Music. También soporta minuto de inicio (ej. ?t=45s).
+                Al darle Play en YouTube, la letra comenzará a scrollear automáticamente y se pausará si tú pausas la canción.
               </p>
               {inputError && (
                 <div className="flex items-center gap-1.5 text-rose-400 text-xs mt-2 font-medium">
@@ -188,7 +498,7 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
               )}
             </div>
 
-            {/* Preview if valid */}
+            {/* Live thumbnail preview */}
             {urlInput.trim() && parseYouTubeUrl(urlInput).videoId && (
               <div className="flex items-center gap-3 p-2.5 rounded-xl bg-zinc-950/70 border border-zinc-800">
                 <img
@@ -239,7 +549,7 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
                 className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-red-600/30 transition flex items-center gap-1.5 cursor-pointer"
               >
                 <Check className="w-4 h-4" />
-                <span>Guardar y Reproducir</span>
+                <span>Guardar y Sincronizar</span>
               </button>
             </div>
           </form>
@@ -248,187 +558,271 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
     )
   }
 
-  const embedUrl = buildYouTubeEmbedUrl(parsed.videoId, {
-    autoplay: true,
-    startTime: parsed.startTime
-  })
-
-  // 2. Minimized Floating Audio Bar (sits at bottom right, super slim)
-  if (isMinimized) {
+  // 2. Docked at Top View (ideal for Stage Mode or when pinned to top)
+  if (isDockedTop) {
     return (
-      <aside
-        aria-label="Reproductor de audio minimizado"
-        className="fixed bottom-4 right-4 z-40 bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/80 rounded-2xl p-2 sm:p-2.5 shadow-2xl flex items-center gap-2 sm:gap-3 max-w-[92vw] sm:max-w-md animate-in slide-in-from-bottom-3 duration-200"
-      >
-        <div className="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-md">
-          <YouTubeIcon className="w-4 h-4 text-white" />
+      <div className="fixed top-13 sm:top-14 left-0 right-0 z-40 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 shadow-xl transition-all">
+        {/* Progress track */}
+        {duration > 0 && (
+          <div className="w-full h-1 bg-zinc-800 overflow-hidden">
+            <div
+              className="h-full bg-red-600 transition-all duration-300"
+              style={{ width: `${Math.min(100, (currentTime / duration) * 100)}%` }}
+            />
+          </div>
+        )}
+
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-2">
+          {/* Left info & status */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0">
+              <YouTubeIcon className="w-3.5 h-3.5 text-white" />
+            </div>
+            <div className="min-w-0 flex items-center gap-2">
+              <span className="text-xs font-extrabold text-white truncate max-w-[140px] sm:max-w-xs">
+                {songTitle}
+              </span>
+              <span className="text-[11px] font-mono text-zinc-400 hidden sm:inline">
+                {formatDuration(currentTime)} / {formatDuration(duration)}
+              </span>
+              {isPlaying && (
+                <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Scroll sincronizado
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Right controls */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Play/Pause Button */}
+            <button
+              type="button"
+              onClick={togglePlayPause}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                isPlaying
+                  ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-md shadow-amber-500/20 animate-pulse'
+                  : 'bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-600/30'
+              }`}
+              title={isPlaying ? 'Pausar canción y scroll' : 'Reproducir canción y scroll'}
+            >
+              {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+              <span>{isPlaying ? 'Pausar' : 'Reproducir'}</span>
+            </button>
+
+            {/* Toggle Docked vs Floating */}
+            <button
+              type="button"
+              onClick={toggleDockTop}
+              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+              title="Hacer ventana flotante"
+            >
+              <PinOff className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Toggle video expanded */}
+            <button
+              type="button"
+              onClick={toggleMinimized}
+              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+              title={isMinimized ? 'Ver video' : 'Ocultar video'}
+            >
+              {isMinimized ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
+            </button>
+
+            {/* Close */}
+            <button
+              type="button"
+              onClick={handleClose}
+              className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+              title="Cerrar reproductor"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        <div className="min-w-0 pr-1">
-          <p className="text-xs font-bold text-white truncate max-w-[160px] sm:max-w-[200px]">
-            {songTitle}
-          </p>
-          <p className="text-[10px] text-zinc-400 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Audio de Referencia Activo</span>
-          </p>
+        {/* Video iframe container (collapsible, kept in DOM so audio never stops) */}
+        <div className={`transition-all duration-300 overflow-hidden ${isMinimized ? 'h-0 opacity-0 pointer-events-none' : 'max-w-md mx-auto aspect-video bg-black pb-2 px-3'}`}>
+          <div id={playerId} className="w-full h-full rounded-2xl overflow-hidden" />
         </div>
-
-        <div className="flex items-center gap-1 shrink-0 border-l border-zinc-800 pl-2">
-          {/* Scroll sync quick trigger */}
-          <button
-            type="button"
-            onClick={handleToggleScrollFromPlayer}
-            className={`p-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
-              isScrollPlaying
-                ? 'bg-amber-500 text-zinc-950 shadow-sm'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-            }`}
-            title={isScrollPlaying ? 'Pausar Auto-Scroll' : 'Iniciar Auto-Scroll'}
-          >
-            {isScrollPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-          </button>
-
-          {/* Maximize */}
-          <button
-            type="button"
-            onClick={toggleMinimized}
-            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
-            title="Expandir ventana de video"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Close */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition cursor-pointer"
-            title="Cerrar reproductor"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </aside>
+      </div>
     )
   }
 
-  // 3. Expanded Floating Picture-in-Picture Video Card
+  // 3. Floating Draggable Player (moves anywhere on screen so it never covers anything!)
   return (
-    <aside
-      aria-label="Reproductor de video de referencia"
-      className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-40 w-[94vw] sm:w-[380px] md:w-[420px] bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/80 rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+    <div
+      style={{
+        transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 50,
+        touchAction: 'none'
+      }}
+      className={`transition-shadow select-none ${isDragging ? 'shadow-2xl opacity-95 scale-[1.02]' : 'shadow-xl'}`}
     >
-      {/* Header bar */}
-      <div className="px-3.5 py-2.5 bg-zinc-950/80 border-b border-zinc-800 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-5 h-5 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0">
-            <YouTubeIcon className="w-3.5 h-3.5 text-white" />
+      <div
+        className={`bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/80 shadow-2xl overflow-hidden flex flex-col transition-all ${
+          isMinimized ? 'w-72 sm:w-80 rounded-2xl' : 'w-[320px] sm:w-[380px] rounded-3xl'
+        }`}
+      >
+        {isMinimized ? (
+          /* Minimized Floating Audio Bar Header */
+          <div
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            className="p-2 flex items-center gap-2 cursor-grab active:cursor-grabbing w-full"
+          >
+            <div className="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-md">
+              <YouTubeIcon className="w-4 h-4 text-white" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-white truncate">{songTitle}</p>
+              <p className="text-[10px] text-zinc-400 flex items-center gap-1">
+                <span className={`w-1.5 h-1.5 rounded-full ${isPlaying ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
+                <span>{isPlaying ? 'Scroll automático activo' : formatDuration(currentTime)}</span>
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0 border-l border-zinc-800 pl-1.5">
+              <button
+                type="button"
+                onClick={togglePlayPause}
+                className={`p-1.5 rounded-lg transition cursor-pointer ${
+                  isPlaying ? 'bg-amber-500 text-zinc-950 shadow-sm' : 'bg-red-600 text-white'
+                }`}
+                title={isPlaying ? 'Pausar' : 'Reproducir'}
+              >
+                {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleDockTop}
+                className="p-1.5 text-zinc-400 hover:text-white rounded-lg transition cursor-pointer"
+                title="Fijar arriba"
+              >
+                <Pin className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleMinimized}
+                className="p-1.5 text-zinc-400 hover:text-white rounded-lg transition cursor-pointer"
+                title="Expandir video"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClose}
+                className="p-1.5 text-zinc-400 hover:text-rose-400 rounded-lg transition cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
-          <span className="text-xs font-black text-white truncate">{songTitle}</span>
+        ) : (
+          /* Expanded Floating Video Window Header */
+          <div
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            className="px-3 py-2 bg-zinc-950/90 border-b border-zinc-800 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <GripHorizontal className="w-4 h-4 text-zinc-500 shrink-0" />
+              <div className="w-5 h-5 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0">
+                <YouTubeIcon className="w-3 h-3 text-white" />
+              </div>
+              <span className="text-xs font-black text-white truncate max-w-[130px] sm:max-w-[180px]">
+                {songTitle}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Pin to top */}
+              <button
+                type="button"
+                onClick={toggleDockTop}
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                title="Fijar arriba como scroll"
+              >
+                <Pin className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Edit URL */}
+              <button
+                type="button"
+                onClick={() => setIsEditingUrl(true)}
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                title="Cambiar video"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Open on YouTube */}
+              <a
+                href={parsed.cleanUrl || youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                title="Abrir en YouTube"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+
+              {/* Minimize */}
+              <button
+                type="button"
+                onClick={toggleMinimized}
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                title="Minimizar"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Close */}
+              <button
+                type="button"
+                onClick={handleClose}
+                className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Video iframe container (always kept mounted in DOM so audio never stops!) */}
+        <div className={`transition-all duration-300 overflow-hidden ${isMinimized ? 'h-0 opacity-0 pointer-events-none' : 'w-full aspect-video bg-black relative'}`}>
+          <div id={playerId} className="w-full h-full" />
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          {/* Edit URL */}
-          <button
-            type="button"
-            onClick={() => setIsEditingUrl(true)}
-            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
-            title="Cambiar video de YouTube"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
+        {/* Bottom auto-sync info bar (only visible when expanded) */}
+        {!isMinimized && (
+          <div className="px-3.5 py-2 bg-zinc-950/90 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-400">
+            <div className="flex items-center gap-1.5 font-medium text-[11px]">
+              <span className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-emerald-400 animate-ping' : 'bg-zinc-500'}`} />
+              <span className={isPlaying ? 'text-emerald-400 font-bold' : 'text-zinc-400'}>
+                {isPlaying ? 'Auto-Scroll sincronizado activo' : 'Dale Play al video para iniciar'}
+              </span>
+            </div>
 
-          {/* Open on YouTube */}
-          <a
-            href={parsed.cleanUrl || youtubeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
-            title="Abrir en YouTube"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-
-          {/* Minimize to Audio Bar */}
-          <button
-            type="button"
-            onClick={toggleMinimized}
-            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
-            title="Minimizar a barra de audio"
-          >
-            <Minimize2 className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Close */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition cursor-pointer"
-            title="Cerrar video"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
+            <div className="font-mono text-[11px] text-zinc-300">
+              {formatDuration(currentTime)} / {formatDuration(duration)}
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Responsive 16:9 Video Embed */}
-      <div className="relative w-full aspect-video bg-black">
-        <iframe
-          src={embedUrl}
-          title={`YouTube reference for ${songTitle}`}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          className="absolute inset-0 w-full h-full border-0"
-        />
-      </div>
-
-      {/* Footer controls: Auto-scroll integration */}
-      <div className="px-3.5 py-2.5 bg-zinc-950/90 border-t border-zinc-800 flex items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleSyncScroll}
-            className={`w-4 h-4 rounded flex items-center justify-center border transition cursor-pointer ${
-              syncScroll
-                ? `${themeConfig.primaryBg} border-transparent text-white`
-                : 'border-zinc-600 bg-zinc-800'
-            }`}
-            title="Sincronizar reproducción con Auto-Scroll"
-          >
-            {syncScroll && <Check className="w-3 h-3 stroke-[3]" />}
-          </button>
-          <span
-            onClick={toggleSyncScroll}
-            className="text-[11px] font-semibold text-zinc-300 cursor-pointer select-none"
-          >
-            Auto-Scroll Sincronizado
-          </span>
-        </div>
-
-        {/* Quick Scroll Play/Pause */}
-        <button
-          type="button"
-          onClick={handleToggleScrollFromPlayer}
-          className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 ${
-            isScrollPlaying
-              ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-md shadow-amber-500/20'
-              : `${themeConfig.primaryButton} shadow-sm`
-          }`}
-        >
-          {isScrollPlaying ? (
-            <>
-              <Pause className="w-3 h-3 fill-current" />
-              <span>Pausar Scroll</span>
-            </>
-          ) : (
-            <>
-              <Play className="w-3 h-3 fill-current" />
-              <span>Iniciar Scroll</span>
-            </>
-          )}
-        </button>
-      </div>
-    </aside>
+    </div>
   )
 }

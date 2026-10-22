@@ -64,6 +64,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   const accumulatedScrollRef = useRef<number>(0)
   const isPlayingRef = useRef<boolean>(false)
   isPlayingRef.current = isPlaying
+  const lastYtSyncRef = useRef<number>(0)
 
   // Get maximum scrollable height
   const getMaxScroll = (): number => {
@@ -210,18 +211,88 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
       setIsPlaying(false)
     }
 
+    const handleRemotePlay = (e: Event) => {
+      const custom = e as CustomEvent<{ currentTime?: number; duration?: number }>
+      if (custom?.detail && typeof custom.detail.currentTime === 'number') {
+        elapsedRef.current = custom.detail.currentTime
+        setElapsedSeconds(custom.detail.currentTime)
+        if (custom.detail.duration && custom.detail.duration > 0) {
+          setTargetDuration(custom.detail.duration)
+          lastYtSyncRef.current = performance.now()
+          const maxScroll = getMaxScroll()
+          if (maxScroll > 0) {
+            const progress = Math.min(1, Math.max(0, custom.detail.currentTime / custom.detail.duration))
+            const targetY = progress * maxScroll
+            accumulatedScrollRef.current = targetY
+            setScrollY(targetY, true)
+          }
+        }
+      } else if (!isPlaying) {
+        accumulatedScrollRef.current = getScrollY()
+      }
+      lastTimeRef.current = performance.now()
+      setIsPlaying(true)
+    }
+
+    const handleSyncTime = (e: Event) => {
+      const custom = e as CustomEvent<{ currentTime: number; duration: number }>
+      if (!custom.detail) return
+      const { currentTime: ytCur, duration: ytDur } = custom.detail
+
+      lastYtSyncRef.current = performance.now()
+      elapsedRef.current = ytCur
+      setElapsedSeconds(ytCur)
+      if (ytDur > 0 && Math.abs(targetDuration - ytDur) > 1) {
+        setTargetDuration(ytDur)
+      }
+
+      // When YouTube audio is playing with known duration, keep lyrics in 1:1 sync
+      if (ytDur > 0) {
+        if (mode === 'sections') {
+          const currentSec =
+            timingData.sections.find(
+              s => ytCur >= s.startSec && ytCur < s.endSec
+            ) || timingData.sections[timingData.sections.length - 1]
+
+          if (currentSec && currentSec.index !== currentSecRef.current) {
+            currentSecRef.current = currentSec.index
+            onActiveSectionChange?.(currentSec.index)
+            const targetDomIndex = currentSec.targetSectionIndex ?? currentSec.index
+            const bounds = calculateSectionScrollBounds(targetDomIndex, currentSec.startSec)
+            if (bounds) {
+              sectionScrollStateRef.current = bounds
+              accumulatedScrollRef.current = bounds.startScrollY
+              setScrollY(bounds.startScrollY, true)
+            }
+          }
+        } else {
+          const maxScroll = getMaxScroll()
+          if (maxScroll > 0) {
+            const progress = Math.min(1, Math.max(0, ytCur / ytDur))
+            const targetY = progress * maxScroll
+            accumulatedScrollRef.current = targetY
+            setScrollY(targetY, false)
+          }
+        }
+      }
+    }
+
     window.addEventListener('chords:scroll:cmd-toggle', handleRemoteToggle)
     window.addEventListener('chords:scroll:cmd-set-mode', handleRemoteSetMode)
     window.addEventListener('chords:scroll:cmd-set-speed', handleRemoteSetSpeed)
     window.addEventListener('chords:scroll:cmd-pause', handleRemotePause)
+    window.addEventListener('chords:scroll:cmd-play', handleRemotePlay)
+    window.addEventListener('chords:scroll:sync-time', handleSyncTime)
 
     return () => {
       window.removeEventListener('chords:scroll:cmd-toggle', handleRemoteToggle)
       window.removeEventListener('chords:scroll:cmd-set-mode', handleRemoteSetMode)
       window.removeEventListener('chords:scroll:cmd-set-speed', handleRemoteSetSpeed)
       window.removeEventListener('chords:scroll:cmd-pause', handleRemotePause)
+      window.removeEventListener('chords:scroll:cmd-play', handleRemotePlay)
+      window.removeEventListener('chords:scroll:sync-time', handleSyncTime)
     }
-  }, [isPlaying])
+  }, [isPlaying, mode, targetDuration, timingData.sections])
 
   // Track whether current section fits fully on screen or needs 1x overflow scroll
   const sectionScrollStateRef = useRef<{
@@ -323,6 +394,13 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
       const deltaSec = deltaMs / 1000
 
       const maxScroll = getMaxScroll()
+
+      // If YouTube reference video is actively synchronizing playback, let YouTube drive the scroll
+      const isYtActive = performance.now() - lastYtSyncRef.current < 600
+      if (isYtActive) {
+        animationFrameRef.current = requestAnimationFrame(step)
+        return
+      }
 
       if (mode === 'manual') {
         // Linear calibrated speed with float accumulation (fixes 0.5x - 1.6x subpixel bug!)
