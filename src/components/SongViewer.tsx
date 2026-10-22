@@ -111,12 +111,115 @@ export const splitSegmentsIntoWords = (segments: ChordSegment[]): ChordSegment[]
   return result
 }
 
+export type StageColor = 'pink' | 'blue' | 'orange' | 'amber' | 'green'
+
+export interface StageColorConfig {
+  id: StageColor
+  name: string
+  label: string
+  dotClass: string
+  ringClass: string
+  chordClass: string
+  chordHoverClass: string
+  activeBorderClass: string
+  activeBgClass: string
+  activeTextClass: string
+  arrowClass: string
+  badgeClass: string
+  borderGlowClass: string
+  pingClass: string
+}
+
+export const STAGE_COLORS: Record<StageColor, StageColorConfig> = {
+  pink: {
+    id: 'pink',
+    name: 'Rosa Neón (Cyberpunk)',
+    label: 'Rosa',
+    dotClass: 'bg-pink-400',
+    ringClass: 'ring-pink-400 shadow-[0_0_10px_rgba(244,114,182,0.8)]',
+    chordClass: 'text-pink-400 font-black drop-shadow-[0_0_8px_rgba(244,114,182,0.5)]',
+    chordHoverClass: 'hover:text-pink-200 hover:bg-pink-500/20',
+    activeBorderClass: 'border-l-4 border-pink-500',
+    activeBgClass: 'bg-gradient-to-r from-pink-500/[0.22] via-pink-500/[0.06] to-transparent',
+    activeTextClass: 'text-pink-300 font-black',
+    arrowClass: 'text-pink-400 font-black drop-shadow-[0_0_6px_rgba(244,114,182,0.7)]',
+    badgeClass: 'bg-pink-500/20 text-pink-300 border-pink-500/50 shadow-[0_0_8px_rgba(244,114,182,0.3)]',
+    borderGlowClass: 'border-pink-500/50 shadow-[0_0_12px_rgba(244,114,182,0.25)]',
+    pingClass: 'bg-pink-400'
+  },
+  blue: {
+    id: 'blue',
+    name: 'Azul Cyan (Tokyo Night)',
+    label: 'Azul',
+    dotClass: 'bg-cyan-400',
+    ringClass: 'ring-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]',
+    chordClass: 'text-cyan-400 font-black drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]',
+    chordHoverClass: 'hover:text-cyan-200 hover:bg-cyan-500/20',
+    activeBorderClass: 'border-l-4 border-cyan-400',
+    activeBgClass: 'bg-gradient-to-r from-cyan-500/[0.22] via-cyan-500/[0.06] to-transparent',
+    activeTextClass: 'text-cyan-300 font-black',
+    arrowClass: 'text-cyan-400 font-black drop-shadow-[0_0_6px_rgba(34,211,238,0.7)]',
+    badgeClass: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-[0_0_8px_rgba(34,211,238,0.3)]',
+    borderGlowClass: 'border-cyan-500/50 shadow-[0_0_12px_rgba(34,211,238,0.25)]',
+    pingClass: 'bg-cyan-400'
+  },
+  orange: {
+    id: 'orange',
+    name: 'Naranja Neón (Dracula / Sunset)',
+    label: 'Naranja',
+    dotClass: 'bg-orange-400',
+    ringClass: 'ring-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.8)]',
+    chordClass: 'text-orange-400 font-black drop-shadow-[0_0_8px_rgba(251,146,60,0.5)]',
+    chordHoverClass: 'hover:text-orange-200 hover:bg-orange-500/20',
+    activeBorderClass: 'border-l-4 border-orange-400',
+    activeBgClass: 'bg-gradient-to-r from-orange-500/[0.22] via-orange-500/[0.06] to-transparent',
+    activeTextClass: 'text-orange-300 font-black',
+    arrowClass: 'text-orange-400 font-black drop-shadow-[0_0_6px_rgba(251,146,60,0.7)]',
+    badgeClass: 'bg-orange-500/20 text-orange-300 border-orange-500/50 shadow-[0_0_8px_rgba(251,146,60,0.3)]',
+    borderGlowClass: 'border-orange-500/50 shadow-[0_0_12px_rgba(251,146,60,0.25)]',
+    pingClass: 'bg-orange-400'
+  },
+  amber: {
+    id: 'amber',
+    name: 'Ámbar Oro (Clásico Escenario)',
+    label: 'Ámbar',
+    dotClass: 'bg-amber-400',
+    ringClass: 'ring-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.8)]',
+    chordClass: 'text-amber-300 font-black drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]',
+    chordHoverClass: 'hover:text-amber-100 hover:bg-amber-400/20',
+    activeBorderClass: 'border-l-4 border-amber-400',
+    activeBgClass: 'bg-gradient-to-r from-amber-500/[0.22] via-amber-500/[0.06] to-transparent',
+    activeTextClass: 'text-amber-300 font-black',
+    arrowClass: 'text-amber-400 font-black drop-shadow-[0_0_6px_rgba(251,191,36,0.7)]',
+    badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_8px_rgba(251,191,36,0.3)]',
+    borderGlowClass: 'border-amber-500/50 shadow-[0_0_12px_rgba(251,191,36,0.25)]',
+    pingClass: 'bg-amber-400'
+  },
+  green: {
+    id: 'green',
+    name: 'Verde Esmeralda (Matrix)',
+    label: 'Verde',
+    dotClass: 'bg-emerald-400',
+    ringClass: 'ring-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]',
+    chordClass: 'text-emerald-400 font-black drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]',
+    chordHoverClass: 'hover:text-emerald-200 hover:bg-emerald-500/20',
+    activeBorderClass: 'border-l-4 border-emerald-400',
+    activeBgClass: 'bg-gradient-to-r from-emerald-500/[0.22] via-emerald-500/[0.06] to-transparent',
+    activeTextClass: 'text-emerald-300 font-black',
+    arrowClass: 'text-emerald-400 font-black drop-shadow-[0_0_6px_rgba(52,211,153,0.7)]',
+    badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_8px_rgba(52,211,153,0.3)]',
+    borderGlowClass: 'border-emerald-500/50 shadow-[0_0_12px_rgba(52,211,153,0.25)]',
+    pingClass: 'bg-emerald-400'
+  }
+}
+
 interface LyricLineProps {
   line: ParsedLine
   semitoneShift: number
   accidental: 'flat' | 'sharp'
   notation: NotationSystem
   stageMode: boolean
+  stageColor: StageColor
   fontSize: number
   onChordClick: (chord: string) => void
 }
@@ -127,11 +230,14 @@ const LyricLine: React.FC<LyricLineProps> = React.memo(({
   accidental,
   notation,
   stageMode,
+  stageColor,
   fontSize,
   onChordClick
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [wrappedIndices, setWrappedIndices] = useState<Set<number>>(new Set())
+
+  const colorConfig = STAGE_COLORS[stageColor] || STAGE_COLORS.pink
 
   const hasAnyChords = line.segments?.some(s => !!s.chord)
   const hasLyrics = line.segments?.some(s => (s.text || '').trim().length > 0)
@@ -221,9 +327,7 @@ const LyricLine: React.FC<LyricLineProps> = React.memo(({
             {isWrappedRowStart && !isChordOnlyLine && (
               <span
                 className={`absolute -left-5 sm:-left-6 bottom-0.5 sm:bottom-1 font-black text-xs sm:text-sm select-none pointer-events-none transition-colors ${
-                  stageMode
-                    ? 'text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]'
-                    : 'text-emerald-400'
+                  stageMode ? colorConfig.arrowClass : 'text-emerald-400'
                 }`}
                 title="Continuación de renglón"
                 aria-hidden="true"
@@ -239,7 +343,7 @@ const LyricLine: React.FC<LyricLineProps> = React.memo(({
                 title={`Ver digitación de ${chordDisplay}`}
                 className={`font-sans font-black text-xs sm:text-sm px-1 py-0.5 leading-tight rounded cursor-pointer transition select-none ${
                   stageMode
-                    ? 'text-amber-300 hover:text-amber-100 hover:bg-amber-400/20 drop-shadow-[0_0_8px_rgba(251,191,36,0.45)]'
+                    ? `${colorConfig.chordClass} ${colorConfig.chordHoverClass}`
                     : 'text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300'
                 }`}
               >
@@ -321,6 +425,36 @@ export const SongViewer: React.FC<SongViewerProps> = ({
       return next
     })
   }
+
+  const [stageColor, setStageColor] = useState<StageColor>(() => {
+    try {
+      const saved = localStorage.getItem('chords_stage_color') as StageColor
+      if (saved && STAGE_COLORS[saved]) return saved
+    } catch {}
+    return 'pink'
+  })
+
+  const handleSelectStageColor = (color: StageColor) => {
+    setStageColor(color)
+    try {
+      localStorage.setItem('chords_stage_color', color)
+    } catch {}
+  }
+
+  // Escape key exits Stage Mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && stageMode) {
+        setStageMode(false)
+        try {
+          localStorage.setItem('chords_stage_mode', 'false')
+        } catch {}
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [stageMode])
+
   const [activeChordModal, setActiveChordModal] = useState<string | null>(null)
   const [preferredInstrument, setPreferredInstrument] = useState<'guitar' | 'bass'>(() => {
     try {
@@ -564,6 +698,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     const isCurrentSec = sIdx >= 0 && activeSectionIndex === sIdx
     const isTargetOfActive = sIdx >= 0 && currentActiveSec?.targetSectionIndex === sIdx
     const isActive = isCurrentSec || isTargetOfActive
+    const colorConfig = STAGE_COLORS[stageColor] || STAGE_COLORS.pink
 
     if (block.isRepeat) {
       /* Repeat Section Banner (e.g. [Coro] repeating previous chorus) */
@@ -580,7 +715,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           className={`my-2 sm:my-2.5 font-bold tracking-wide text-xs sm:text-sm pl-3 sm:pl-3.5 pr-2 py-1.5 select-none transition-colors duration-200 cursor-pointer ${
             isActive
               ? stageMode
-                ? 'border-l-4 border-amber-400 bg-gradient-to-r from-amber-500/[0.22] via-amber-500/[0.06] to-transparent text-amber-300'
+                ? `${colorConfig.activeBorderClass} ${colorConfig.activeBgClass} ${colorConfig.activeTextClass}`
                 : 'border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-500/[0.15] via-emerald-500/[0.04] to-transparent text-emerald-300'
               : 'border-l-4 border-transparent text-zinc-400 hover:text-zinc-200'
           }`}
@@ -588,20 +723,22 @@ export const SongViewer: React.FC<SongViewerProps> = ({
         >
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className={`font-extrabold text-xs ${stageMode ? 'text-amber-400' : 'text-emerald-400'}`}>⤴</span>
+              <span className={`font-extrabold text-xs ${stageMode ? colorConfig.activeTextClass : 'text-emerald-400'}`}>⤴</span>
               <span className="uppercase font-black text-white">{block.headerLine?.comment}</span>
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                 isActive
                   ? stageMode
-                    ? 'text-amber-300 bg-amber-500/20'
+                    ? `${colorConfig.activeTextClass} bg-white/10`
                     : 'text-emerald-300 bg-emerald-500/20'
                   : 'text-zinc-500 bg-zinc-800/40'
               }`}>
                 Repite {secTiming?.parentTitle || 'sección anterior'}
               </span>
               {isCurrentSec && (
-                <span className="text-[10px] text-amber-300 font-bold animate-pulse flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                <span className={`text-[10px] font-bold animate-pulse flex items-center gap-1 ${
+                  stageMode ? colorConfig.activeTextClass : 'text-amber-300'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full inline-block ${stageMode ? colorConfig.pingClass : 'bg-amber-400'}`} />
                   En pantalla arriba ↑
                 </span>
               )}
@@ -610,7 +747,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${
                 isActive
                   ? stageMode
-                    ? 'text-amber-300 bg-amber-500/25'
+                    ? colorConfig.badgeClass
                     : 'text-emerald-300 bg-emerald-500/25'
                   : 'text-zinc-500'
               }`}>
@@ -631,7 +768,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
         className={`my-2.5 sm:my-3 transition-colors duration-200 pl-3 sm:pl-3.5 pr-2 py-1.5 ${
           isActive
             ? stageMode
-              ? 'border-l-4 border-amber-400 bg-gradient-to-r from-amber-500/[0.22] via-amber-500/[0.06] to-transparent'
+              ? `${colorConfig.activeBorderClass} ${colorConfig.activeBgClass}`
               : 'border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-500/[0.14] via-emerald-500/[0.04] to-transparent'
             : 'border-l-4 border-transparent'
         }`}
@@ -642,23 +779,25 @@ export const SongViewer: React.FC<SongViewerProps> = ({
             <span className="flex items-center gap-2">
               {isActive ? (
                 <span className={`w-2 h-2 rounded-full animate-ping inline-block shrink-0 ${
-                  stageMode ? 'bg-amber-400' : 'bg-emerald-400'
+                  stageMode ? colorConfig.pingClass : 'bg-emerald-400'
                 }`} />
               ) : (
                 <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${
-                  stageMode ? 'bg-amber-500/60' : 'bg-emerald-500/60'
+                  stageMode ? `${colorConfig.pingClass} opacity-60` : 'bg-emerald-500/60'
                 }`} />
               )}
               <span className={`uppercase font-black tracking-wide text-xs sm:text-sm ${
                 isActive
-                  ? stageMode ? 'text-amber-300' : 'text-emerald-300'
-                  : stageMode ? 'text-amber-400/90' : 'text-emerald-400/90'
+                  ? stageMode ? colorConfig.activeTextClass : 'text-emerald-300'
+                  : stageMode ? 'text-zinc-300' : 'text-emerald-400/90'
               }`}>
                 {block.headerLine.comment}
               </span>
               {isTargetOfActive && !isCurrentSec && (
-                <span className="text-[10px] text-amber-300 font-bold animate-pulse flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                <span className={`text-[10px] font-bold animate-pulse flex items-center gap-1 px-2 py-0.5 rounded-full ${
+                  stageMode ? `${colorConfig.activeTextClass} bg-white/10` : 'text-amber-300 bg-amber-500/10'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full inline-block ${stageMode ? colorConfig.pingClass : 'bg-amber-400'}`} />
                   Repitiendo arriba
                 </span>
               )}
@@ -668,7 +807,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full transition flex items-center gap-1 ${
                   isActive
                     ? stageMode
-                      ? 'bg-amber-500/25 text-amber-300'
+                      ? colorConfig.badgeClass
                       : 'bg-emerald-500/25 text-emerald-300'
                     : 'text-zinc-500'
                 }`}
@@ -693,6 +832,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               accidental={accidental}
               notation={notation}
               stageMode={stageMode}
+              stageColor={stageColor}
               fontSize={fontSize}
               onChordClick={setActiveChordModal}
             />
@@ -702,6 +842,8 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     )
   }
 
+  const colorConfig = STAGE_COLORS[stageColor] || STAGE_COLORS.pink
+
   return (
     <div
       className={`w-full min-h-screen transition-colors duration-300 overflow-x-hidden ${
@@ -709,142 +851,259 @@ export const SongViewer: React.FC<SongViewerProps> = ({
       }`}
     >
       {/* 
-        SINGLE UNIFIED TOP BAR (Ultra-clean, single header row)
+        SINGLE UNIFIED TOP BAR
+        - Stage Mode / Zen: Cero distracciones (oculta Editar, Guardar PDF y Menús; solo Tono, Compás, Colores y Salir)
+        - Normal Mode: Barra completa con edición, catálogo, PDF y menú de ajustes
       */}
       <header className={`no-print sticky top-0 z-40 backdrop-blur-md border-b transition-colors shadow-md ${
-        stageMode ? 'bg-black/95 border-zinc-800/80 text-white' : 'bg-zinc-900/95 border-zinc-800 text-zinc-100'
+        stageMode ? 'bg-black/95 border-zinc-800/80 text-white shadow-xl' : 'bg-zinc-900/95 border-zinc-800 text-zinc-100'
       }`}>
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
-          {/* Left: Brand Logo & Transposition Controls */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {onBackToLibrary && (
+        {stageMode ? (
+          /* =================================================== */
+          /* MODO ZEN / ESCENARIO: CERO DISTRACCIONES           */
+          /* =================================================== */
+          <div className="max-w-6xl mx-auto px-2 sm:px-4 h-13 sm:h-14 flex items-center justify-between gap-2">
+            {/* Left: Salir de Escenario + Transposición + Compás */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Botón Salir */}
               <button
-                onClick={onBackToLibrary}
-                className="cursor-pointer hover:opacity-90 transition-opacity flex items-center"
-                title="Volver a Canciones"
+                onClick={handleToggleStageMode}
+                title="Salir del Modo Escenario Zen (o pulsa Escape)"
+                className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-bold rounded-xl border border-zinc-800 transition flex items-center gap-1 cursor-pointer select-none"
               >
-                <img
-                  src="/logo.png"
-                  alt="Logo Lampei"
-                  className="h-8 sm:h-9 w-auto object-contain shrink-0 drop-shadow-[0_2px_10px_rgba(16,185,129,0.4)] transition-transform hover:scale-105"
-                />
-              </button>
-            )}
-
-            {/* Transposition Pill */}
-            <div className="flex items-center gap-1 sm:gap-1.5 bg-zinc-800/90 p-1 rounded-xl border border-zinc-700/80">
-              <button
-                onClick={() => handleShift(-1)}
-                title="Bajar 1 semitono (-1)"
-                className="px-2 py-0.5 sm:py-1 bg-zinc-700/80 hover:bg-zinc-600 text-zinc-200 hover:text-emerald-400 font-bold text-xs rounded-lg transition"
-              >
-                -1
+                <X className="w-3.5 h-3.5 text-rose-400" />
+                <span className="hidden sm:inline">Salir</span>
               </button>
 
-              <div className="relative inline-block">
-                <select
-                  value={effectiveKey}
-                  onChange={e => handleKeySelect(e.target.value)}
-                  className="appearance-none bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm px-2 sm:px-2.5 py-0.5 sm:py-1 pr-5 rounded-lg shadow cursor-pointer focus:outline-none"
+              {/* Transposition Pill Compact */}
+              <div className="flex items-center gap-0.5 sm:gap-1 bg-zinc-900 p-0.5 sm:p-1 rounded-xl border border-zinc-800">
+                <button
+                  onClick={() => handleShift(-1)}
+                  title="Bajar 1 semitono (-1)"
+                  className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs rounded-lg transition"
                 >
-                  {keyOptions.map(k => (
-                    <option key={k} value={k} className="bg-zinc-900 text-white">
-                      {k}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3 h-3 text-white/90 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  -1
+                </button>
+
+                <div className="relative inline-block">
+                  <select
+                    value={effectiveKey}
+                    onChange={e => handleKeySelect(e.target.value)}
+                    className="appearance-none bg-zinc-800 hover:bg-zinc-700 text-white font-black text-xs sm:text-sm px-2 py-0.5 pr-4 rounded-lg shadow cursor-pointer focus:outline-none"
+                  >
+                    {keyOptions.map(k => (
+                      <option key={k} value={k} className="bg-black text-white">
+                        {k}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-2.5 h-2.5 text-white/90 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+
+                <button
+                  onClick={() => handleShift(1)}
+                  title="Subir 1 semitono (+1)"
+                  className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs rounded-lg transition"
+                >
+                  +1
+                </button>
               </div>
 
+              {/* Botón Compás / Metrónomo */}
               <button
-                onClick={() => handleShift(1)}
-                title="Subir 1 semitono (+1)"
-                className="px-2 py-0.5 sm:py-1 bg-zinc-700/80 hover:bg-zinc-600 text-zinc-200 hover:text-emerald-400 font-bold text-xs rounded-lg transition"
+                onClick={() => setShowMetronome(m => !m)}
+                title={showMetronome ? 'Ocultar barra de compás' : 'Ver compás y tempo en pantalla'}
+                className={`px-2.5 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 cursor-pointer select-none ${
+                  showMetronome
+                    ? `${colorConfig.badgeClass} font-black`
+                    : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border-zinc-800'
+                }`}
               >
-                +1
+                <span>⏱</span>
+                <span>Compás</span>
+                {song.tempo && <span className="font-mono text-[11px] opacity-80 hidden md:inline">{song.tempo} BPM</span>}
               </button>
-
-              {semitoneShift !== 0 && (
-                <div className="flex items-center gap-1 pl-1">
-                  <span
-                    className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded"
-                    title="Transporte individual (solo en tu pantalla)"
-                  >
-                    {semitoneShift > 0 ? `+${semitoneShift}` : semitoneShift}
-                  </span>
-                  <button
-                    onClick={handleResetShift}
-                    title="Restablecer al tono original"
-                    className="p-1 text-zinc-400 hover:text-white bg-zinc-700/80 rounded transition flex items-center gap-0.5 text-[10px]"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span className="hidden sm:inline">Orig</span>
-                  </button>
-                </div>
-              )}
             </div>
 
-            {/* Stage Mode Quick Toggle Button in Header */}
-            <button
-              onClick={handleToggleStageMode}
-              title={stageMode ? 'Desactivar Modo Escenario' : 'Activar Modo Escenario (Alto Contraste OLED)'}
-              className={`px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border select-none ${
-                stageMode
-                  ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.6)] scale-102'
-                  : 'bg-zinc-800/90 hover:bg-zinc-700 text-zinc-300 hover:text-white border-zinc-700/80'
-              }`}
-            >
-              <Sparkles className={`w-3.5 h-3.5 ${stageMode ? 'text-black fill-black animate-pulse' : 'text-amber-400'}`} />
-              <span className="hidden sm:inline">{stageMode ? 'ESCENARIO' : 'Escenario'}</span>
-            </button>
-          </div>
+            {/* Center: Song Title in Stage Mode */}
+            <div className="hidden lg:flex items-center justify-center flex-1 min-w-0 px-2 truncate">
+              <span className="text-sm font-black text-zinc-200 truncate flex items-center gap-2">
+                <span>{song.title}</span>
+                <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-md border ${colorConfig.badgeClass}`}>
+                  Modo Zen
+                </span>
+              </span>
+            </div>
 
-          {/* Center: Song Title on larger screens */}
-          <div className="hidden lg:flex items-center justify-center flex-1 min-w-0 px-2 truncate">
-            <span className="text-sm font-bold text-zinc-300 truncate">
-              {song.title}
-            </span>
-          </div>
-
-          {/* Right: Guardar PDF, Editar & Menú Hamburguesa */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Guardar PDF button */}
-            <button
-              onClick={() => setIsLocalPrintOpen(true)}
-              title="Guardar como archivo PDF"
-              className="px-2.5 sm:px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 hover:text-white text-emerald-300 border border-emerald-500/40 font-bold text-xs rounded-xl transition flex items-center gap-1.5"
-            >
-              <FileDown className="w-4 h-4 text-emerald-400" />
-              <span className="hidden sm:inline">Guardar PDF</span>
-            </button>
-
-            {/* Editar button */}
-            {onEdit && (
-              <button
-                onClick={onEdit}
-                title="Editar acordes y letra"
-                className="px-2.5 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 border border-emerald-500"
+            {/* Right: Paleta de Colores (Rosa, Azul, Naranja, Ámbar, Verde) + Pantalla Completa */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {/* Selector Rápido de Colores */}
+              <div
+                className="flex items-center gap-1.5 bg-zinc-900/90 px-2 py-1 rounded-xl border border-zinc-800"
+                title="Color de acordes para escenario"
               >
-                <Edit3 className="w-4 h-4" />
-                <span className="hidden sm:inline">Editar</span>
-              </button>
-            )}
+                {(Object.keys(STAGE_COLORS) as StageColor[]).map(cKey => {
+                  const cfg = STAGE_COLORS[cKey]
+                  const isSelected = stageColor === cKey
+                  return (
+                    <button
+                      key={cKey}
+                      onClick={() => handleSelectStageColor(cKey)}
+                      title={`Tema ${cfg.name}`}
+                      className={`w-5 h-5 rounded-full transition-all duration-150 cursor-pointer ${cfg.dotClass} ${
+                        isSelected
+                          ? `scale-125 ring-2 ring-white ${cfg.ringClass}`
+                          : 'opacity-40 hover:opacity-100 hover:scale-110'
+                      }`}
+                    />
+                  )
+                })}
+              </div>
 
-            {/* Hamburger Menu Toggle Button */}
-            <button
-              onClick={() => setIsMenuOpen(true)}
-              className="p-1.5 sm:p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white rounded-xl border border-zinc-700 transition flex items-center justify-center"
-              title="Ajustes y opciones de visualización"
-            >
-              <Menu className="w-5 h-5 text-emerald-400" />
-            </button>
+              {/* Pantalla Completa */}
+              <button
+                onClick={toggleFullscreen}
+                title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa para atril'}
+                className="p-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl border border-zinc-800 transition cursor-pointer"
+              >
+                {isFullscreen ? <Minimize className="w-4 h-4 text-white" /> : <Maximize className="w-4 h-4 text-white" />}
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* =================================================== */
+          /* MODO NORMAL: Con Editar, Guardar PDF, Menú, etc.    */
+          /* =================================================== */
+          <div className="max-w-6xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+            {/* Left: Brand Logo & Transposition Controls */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {onBackToLibrary && (
+                <button
+                  onClick={onBackToLibrary}
+                  className="cursor-pointer hover:opacity-90 transition-opacity flex items-center"
+                  title="Volver a Canciones"
+                >
+                  <img
+                    src="/logo.png"
+                    alt="Logo Lampei"
+                    className="h-8 sm:h-9 w-auto object-contain shrink-0 drop-shadow-[0_2px_10px_rgba(16,185,129,0.4)] transition-transform hover:scale-105"
+                  />
+                </button>
+              )}
+
+              {/* Transposition Pill */}
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-zinc-800/90 p-1 rounded-xl border border-zinc-700/80">
+                <button
+                  onClick={() => handleShift(-1)}
+                  title="Bajar 1 semitono (-1)"
+                  className="px-2 py-0.5 sm:py-1 bg-zinc-700/80 hover:bg-zinc-600 text-zinc-200 hover:text-emerald-400 font-bold text-xs rounded-lg transition"
+                >
+                  -1
+                </button>
+
+                <div className="relative inline-block">
+                  <select
+                    value={effectiveKey}
+                    onChange={e => handleKeySelect(e.target.value)}
+                    className="appearance-none bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm px-2 sm:px-2.5 py-0.5 sm:py-1 pr-5 rounded-lg shadow cursor-pointer focus:outline-none"
+                  >
+                    {keyOptions.map(k => (
+                      <option key={k} value={k} className="bg-zinc-900 text-white">
+                        {k}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3 h-3 text-white/90 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+
+                <button
+                  onClick={() => handleShift(1)}
+                  title="Subir 1 semitono (+1)"
+                  className="px-2 py-0.5 sm:py-1 bg-zinc-700/80 hover:bg-zinc-600 text-zinc-200 hover:text-emerald-400 font-bold text-xs rounded-lg transition"
+                >
+                  +1
+                </button>
+
+                {semitoneShift !== 0 && (
+                  <div className="flex items-center gap-1 pl-1">
+                    <span
+                      className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded"
+                      title="Transporte individual (solo en tu pantalla)"
+                    >
+                      {semitoneShift > 0 ? `+${semitoneShift}` : semitoneShift}
+                    </span>
+                    <button
+                      onClick={handleResetShift}
+                      title="Restablecer al tono original"
+                      className="p-1 text-zinc-400 hover:text-white bg-zinc-700/80 rounded transition flex items-center gap-0.5 text-[10px]"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span className="hidden sm:inline">Orig</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Botón para entrar al Modo Escenario Zen */}
+              <button
+                onClick={handleToggleStageMode}
+                title="Entrar en Modo Escenario Zen (Cero distracciones)"
+                className="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border-zinc-700 cursor-pointer select-none"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                <span className="hidden sm:inline">Modo Escenario</span>
+              </button>
+            </div>
+
+            {/* Center: Song Title on larger screens */}
+            <div className="hidden lg:flex items-center justify-center flex-1 min-w-0 px-2 truncate">
+              <span className="text-sm font-bold text-zinc-300 truncate">
+                {song.title}
+              </span>
+            </div>
+
+            {/* Right: Guardar PDF, Editar & Menú Hamburguesa */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Guardar PDF button */}
+              <button
+                onClick={() => setIsLocalPrintOpen(true)}
+                title="Guardar como archivo PDF"
+                className="px-2.5 sm:px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 hover:text-white text-emerald-300 border border-emerald-500/40 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <FileDown className="w-4 h-4 text-emerald-400" />
+                <span className="hidden sm:inline">Guardar PDF</span>
+              </button>
+
+              {/* Editar button */}
+              {onEdit && (
+                <button
+                  onClick={onEdit}
+                  title="Editar acordes y letra"
+                  className="px-2.5 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 border border-emerald-500 cursor-pointer"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Editar</span>
+                </button>
+              )}
+
+              {/* Hamburger Menu Toggle Button */}
+              <button
+                onClick={() => setIsMenuOpen(true)}
+                className="p-1.5 sm:p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white rounded-xl border border-zinc-700 transition flex items-center justify-center cursor-pointer"
+                title="Ajustes y opciones de visualización"
+              >
+                <Menu className="w-5 h-5 text-emerald-400" />
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Optional Collapsible Metronome Bar under the Header */}
       {showMetronome && (
-        <div className="no-print sticky top-14 sm:top-16 z-30 bg-zinc-900/95 backdrop-blur-md border-b border-zinc-800 shadow-md px-3 sm:px-4 py-2">
+        <div className={`no-print sticky top-13 sm:top-14 z-30 backdrop-blur-md border-b shadow-md px-3 sm:px-4 py-2 ${
+          stageMode ? 'bg-black/95 border-zinc-800/80 text-white' : 'bg-zinc-900/95 border-zinc-800 text-zinc-100'
+        }`}>
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
             <div className="flex-1">
               <MetronomeBar
@@ -882,14 +1141,14 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                   {parsed.title || song.title}
                 </h1>
                 {stageMode && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black tracking-wider uppercase bg-amber-400/20 text-amber-300 border border-amber-400/50 shadow-[0_0_8px_rgba(251,191,36,0.25)]">
-                    ⚡ Escenario
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black tracking-wider uppercase border ${colorConfig.badgeClass}`}>
+                    ⚡ Modo Zen · {colorConfig.label}
                   </span>
                 )}
               </div>
               {(parsed.artist || song.artist) && (
                 <p className={`text-xs sm:text-sm font-medium mt-0.5 ${
-                  stageMode ? 'text-amber-400/90' : 'text-emerald-400'
+                  stageMode ? colorConfig.activeTextClass : 'text-emerald-400'
                 }`}>
                   {parsed.artist || song.artist}
                 </p>
@@ -900,7 +1159,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
             <div className="flex items-center gap-1.5 shrink-0">
               <span className={`text-xs font-bold px-2.5 py-1 rounded-xl border ${
                 stageMode
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  ? colorConfig.badgeClass
                   : 'bg-zinc-800/90 text-emerald-400 border border-zinc-700'
               }`}>
                 {effectiveKey}
@@ -1143,26 +1402,53 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                   Pantalla y Atril
                 </label>
                 {/* Stage Mode */}
-                <div className={`flex items-center justify-between p-3 rounded-xl border transition ${
-                  stageMode ? 'bg-amber-950/30 border-amber-500/40' : 'bg-zinc-950 border-zinc-800'
-                }`}>
-                  <div>
-                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <Sparkles className={`w-3.5 h-3.5 ${stageMode ? 'text-amber-400 fill-amber-400' : 'text-zinc-400'}`} />
-                      <span>Modo Escenario</span>
+                <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                        <span>Modo Escenario Zen</span>
+                      </div>
+                      <span className="text-[11px] text-zinc-400">Cero distracciones y pantalla completa</span>
                     </div>
-                    <span className="text-[11px] text-zinc-400">Alto contraste OLED y acordes en ámbar brillante</span>
+                    <button
+                      onClick={handleToggleStageMode}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition cursor-pointer ${
+                        stageMode
+                          ? `${colorConfig.badgeClass} font-black`
+                          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700'
+                      }`}
+                    >
+                      {stageMode ? 'Activo' : 'Entrar'}
+                    </button>
                   </div>
-                  <button
-                    onClick={handleToggleStageMode}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition ${
-                      stageMode
-                        ? 'bg-amber-400 text-black border-amber-300 font-black shadow-[0_0_10px_rgba(251,191,36,0.4)]'
-                        : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700'
-                    }`}
-                  >
-                    {stageMode ? 'Activo' : 'Inactivo'}
-                  </button>
+
+                  {/* Stage color selector */}
+                  <div>
+                    <span className="text-[11px] font-bold text-zinc-400 block mb-1.5">
+                      Color de acordes:
+                    </span>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {(Object.keys(STAGE_COLORS) as StageColor[]).map(cKey => {
+                        const cfg = STAGE_COLORS[cKey]
+                        const isSelected = stageColor === cKey
+                        return (
+                          <button
+                            key={cKey}
+                            onClick={() => handleSelectStageColor(cKey)}
+                            className={`flex flex-col items-center gap-1 py-1.5 px-1 rounded-xl border text-[10px] font-bold transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-zinc-800 border-zinc-600 text-white shadow'
+                                : 'bg-zinc-900/60 border-zinc-800/80 text-zinc-400 hover:text-zinc-200'
+                            }`}
+                          >
+                            <span className={`w-3.5 h-3.5 rounded-full ${cfg.dotClass} ${isSelected ? 'scale-110 ring-2 ring-white' : ''}`} />
+                            <span className="truncate w-full text-center">{cfg.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Fullscreen */}
@@ -1226,19 +1512,19 @@ export const SongViewer: React.FC<SongViewerProps> = ({
           <div
             onClick={e => e.stopPropagation()}
             className={`rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col items-center max-w-sm w-full text-center max-h-[92vh] overflow-y-auto scrollbar-none border ${
-              stageMode ? 'bg-zinc-950 border-amber-500/50 shadow-amber-500/10' : 'bg-zinc-900 border-emerald-900/60'
+              stageMode ? `bg-zinc-950 ${colorConfig.borderGlowClass}` : 'bg-zinc-900 border-emerald-900/60'
             }`}
           >
             {/* Header: Chord Name + Instrument Selector Tabs */}
             <div className="flex items-center justify-between w-full mb-3 pb-2 border-b border-zinc-800">
               <div className="text-left">
                 <span className={`text-lg sm:text-xl font-black block leading-tight ${
-                  stageMode ? 'text-amber-300' : 'text-white'
+                  stageMode ? colorConfig.activeTextClass : 'text-white'
                 }`}>
                   {activeChordModal}
                 </span>
                 <span className={`text-[11px] font-semibold ${
-                  stageMode ? 'text-amber-400' : 'text-emerald-400'
+                  stageMode ? colorConfig.activeTextClass : 'text-emerald-400'
                 }`}>
                   {preferredInstrument === 'guitar' ? 'Guitarra (6 cuerdas)' : 'Bajo Eléctrico'}
                 </span>
