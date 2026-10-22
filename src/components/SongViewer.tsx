@@ -17,7 +17,8 @@ import {
   Sliders,
   BookOpen,
   Play,
-  Pause
+  Pause,
+  Music
 } from 'lucide-react'
 import { YouTubeIcon } from './YouTubeIcon'
 import type { Song, NotationSystem, ParsedLine, ChordSegment } from '../types/song'
@@ -1046,58 +1047,23 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 </button>
               )}
 
-              {/* Transposition Pill */}
-              <div className="flex items-center gap-1 sm:gap-1.5 bg-zinc-800/90 p-1 rounded-xl border border-zinc-700/80">
-                <button
-                  onClick={() => handleShift(-1)}
-                  title="Bajar 1 semitono (-1)"
-                  className={`px-2 py-0.5 sm:py-1 bg-zinc-700/80 hover:bg-zinc-600 text-zinc-200 ${colorConfig.primaryHoverText} font-bold text-xs rounded-lg transition`}
-                >
-                  -1
-                </button>
-
-                <div className="relative inline-block">
-                  <select
-                    value={effectiveKey}
-                    onChange={e => handleKeySelect(e.target.value)}
-                    className={`appearance-none ${colorConfig.primaryBg} ${colorConfig.primaryBgHover} text-white font-black text-xs sm:text-sm px-2 sm:px-2.5 py-0.5 sm:py-1 pr-5 rounded-lg shadow cursor-pointer focus:outline-none`}
-                  >
-                    {keyOptions.map(k => (
-                      <option key={k} value={k} className="bg-zinc-900 text-white">
-                        {k}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-3 h-3 text-white/90 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-
-                <button
-                  onClick={() => handleShift(1)}
-                  title="Subir 1 semitono (+1)"
-                  className={`px-2 py-0.5 sm:py-1 bg-zinc-700/80 hover:bg-zinc-600 text-zinc-200 ${colorConfig.primaryHoverText} font-bold text-xs rounded-lg transition`}
-                >
-                  +1
-                </button>
-
+              {/* Compact Key Badge (Click opens drawer for full transposition) */}
+              <button
+                onClick={() => setIsMenuOpen(true)}
+                title="Cambiar tono o transportar (abrir menú)"
+                className="flex items-center gap-1.5 bg-zinc-800/90 hover:bg-zinc-700 px-2.5 py-1.5 rounded-xl border border-zinc-700/80 transition cursor-pointer select-none group"
+              >
+                <Music className={`w-3.5 h-3.5 ${colorConfig.primaryText}`} />
+                <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-300">Tono:</span>
+                <span className={`text-xs font-black ${colorConfig.primaryText}`}>
+                  {effectiveKey}
+                </span>
                 {semitoneShift !== 0 && (
-                  <div className="flex items-center gap-1 pl-1">
-                    <span
-                      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${colorConfig.primaryBadge}`}
-                      title="Transporte individual (solo en tu pantalla)"
-                    >
-                      {semitoneShift > 0 ? `+${semitoneShift}` : semitoneShift}
-                    </span>
-                    <button
-                      onClick={handleResetShift}
-                      title="Restablecer al tono original"
-                      className="p-1 text-zinc-400 hover:text-white bg-zinc-700/80 rounded transition flex items-center gap-0.5 text-[10px]"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      <span className="hidden sm:inline">Orig</span>
-                    </button>
-                  </div>
+                  <span className={`text-[10px] font-mono font-bold px-1 rounded border ${colorConfig.primaryBadge}`}>
+                    {semitoneShift > 0 ? `+${semitoneShift}` : semitoneShift}
+                  </span>
                 )}
-              </div>
+              </button>
 
               {/* Botón para entrar al Modo Escenario Zen */}
               <button
@@ -1293,7 +1259,88 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 </button>
               </div>
 
-              {/* Group 1: Columns Layout */}
+              {/* Group 1: Tono y Transporte Musical */}
+              <div className="space-y-3 p-3.5 bg-zinc-950 rounded-2xl border border-zinc-800">
+                <div className="flex items-center justify-between">
+                  <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider flex items-center gap-1.5`}>
+                    <Music className="w-3.5 h-3.5" />
+                    <span>Tono y Transporte</span>
+                  </label>
+                  {semitoneShift !== 0 && (
+                    <button
+                      onClick={handleResetShift}
+                      title="Restablecer al tono original"
+                      className="px-2 py-0.5 text-zinc-400 hover:text-white bg-zinc-850 hover:bg-zinc-750 rounded-lg transition flex items-center gap-1 text-[11px] font-semibold border border-zinc-700 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Original</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Main Stepper & Current Key Display */}
+                <div className="flex items-center justify-between gap-2 bg-zinc-900/90 p-2 rounded-xl border border-zinc-800">
+                  <button
+                    onClick={() => handleShift(-1)}
+                    title="Bajar 1 semitono (-1)"
+                    className="flex-1 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-black text-xs sm:text-sm rounded-lg transition border border-zinc-700 cursor-pointer"
+                  >
+                    -1 Semitono
+                  </button>
+
+                  <div className="flex flex-col items-center px-2 min-w-[75px]">
+                    <span className="text-[10px] text-zinc-400 uppercase font-bold">Tono Actual</span>
+                    <span className={`text-xl font-black ${colorConfig.primaryText}`}>
+                      {effectiveKey}
+                    </span>
+                    {semitoneShift !== 0 && (
+                      <span className="text-[10px] font-mono font-bold text-amber-400">
+                        {semitoneShift > 0 ? `+${semitoneShift}` : semitoneShift} st
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => handleShift(1)}
+                    title="Subir 1 semitono (+1)"
+                    className="flex-1 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-black text-xs sm:text-sm rounded-lg transition border border-zinc-700 cursor-pointer"
+                  >
+                    +1 Semitono
+                  </button>
+                </div>
+
+                {/* 12-Tone Quick Grid Selector */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5 text-[11px] text-zinc-400 font-medium">
+                    <span>Elegir tono directo:</span>
+                    <span>Orig: <strong className="text-zinc-200">{song.currentKey || song.originalKey || 'C'}</strong></span>
+                  </div>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-1">
+                    {keyOptions.map(k => {
+                      const isSelected = effectiveKey === k
+                      return (
+                        <button
+                          key={k}
+                          onClick={() => handleKeySelect(k)}
+                          className={`py-1.5 rounded-lg text-xs font-black transition cursor-pointer border ${
+                            isSelected
+                              ? `${colorConfig.primaryBg} text-white border-transparent shadow-sm`
+                              : 'bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-white border-zinc-800'
+                          }`}
+                        >
+                          {k}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-zinc-500 leading-tight">
+                  💡 El transporte es individual para tu vista en este dispositivo.
+                </p>
+              </div>
+
+              {/* Group 2: Columns Layout */}
               <div className="space-y-2">
                 <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider block`}>
                   Columnas en Pantalla

@@ -8,7 +8,8 @@ import {
   Sliders,
   ChevronDown,
   ChevronUp,
-  RotateCcw
+  RotateCcw,
+  Minimize2
 } from 'lucide-react'
 import type { Song } from '../types/song'
 import { calculateSongTiming, formatTime, type SongTimingData } from '../music/songTiming'
@@ -31,6 +32,25 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   const [isPlaying, setIsPlaying] = useState(false)
   const [mode, setMode] = useState<ScrollMode>('manual')
   const [isExpanded, setIsExpanded] = useState(false)
+
+  // Floating pill can be minimized/collapsed to a small button in normal mode
+  const [isPillMinimized, setIsPillMinimized] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('chords_scroll_pill_minimized') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  const togglePillMinimized = () => {
+    setIsPillMinimized(prev => {
+      const next = !prev
+      try {
+        localStorage.setItem('chords_scroll_pill_minimized', String(next))
+      } catch {}
+      return next
+    })
+  }
 
   // 1. Manual mode state
   const [speed, setSpeed] = useState(1.0)
@@ -62,9 +82,11 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   const animationFrameRef = useRef<number | null>(null)
   const lastTimeRef = useRef<number>(0)
   const accumulatedScrollRef = useRef<number>(0)
+  const intendedSectionScrollRef = useRef<number>(0)
   const isPlayingRef = useRef<boolean>(false)
   isPlayingRef.current = isPlaying
   const lastYtSyncRef = useRef<number>(0)
+  const lastUserScrollTimeRef = useRef<number>(0)
 
   // Get maximum scrollable height
   const getMaxScroll = (): number => {
@@ -131,8 +153,11 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   useEffect(() => {
     const handleScroll = () => {
       const currentY = getScrollY()
-      if (Math.abs(currentY - accumulatedScrollRef.current) > 4) {
-        accumulatedScrollRef.current = currentY
+      if (Math.abs(currentY - accumulatedScrollRef.current) > 6) {
+        lastUserScrollTimeRef.current = performance.now()
+        if (mode === 'manual') {
+          accumulatedScrollRef.current = currentY
+        }
       }
     }
 
@@ -144,7 +169,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
       window.removeEventListener('scroll', handleScroll)
       if (el) el.removeEventListener('scroll', handleScroll)
     }
-  }, [scrollContainerRef])
+  }, [scrollContainerRef, mode])
 
   // Play / Pause toggle
   const togglePlay = () => {
@@ -264,7 +289,9 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
             const bounds = calculateSectionScrollBounds(targetDomIndex, currentSec.startSec)
             if (bounds) {
               sectionScrollStateRef.current = bounds
+              intendedSectionScrollRef.current = bounds.startScrollY
               accumulatedScrollRef.current = bounds.startScrollY
+              lastUserScrollTimeRef.current = 0
               setScrollY(bounds.startScrollY, true)
             }
           }
@@ -319,7 +346,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     return elemRect.top + currentWindowScroll
   }
 
-  // Measure section height vs viewport visible height to decide if small 1x scroll is needed
+  // Measure section height vs viewport visible height to center section vertically on screen
   const calculateSectionScrollBounds = (targetDomIndex: number, currentStartSec: number) => {
     const secElem = document.getElementById(`song-section-${targetDomIndex}`)
     if (!secElem) return null
@@ -331,12 +358,15 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     const secBottom = secTop + secHeight
 
     const viewportHeight = container?.clientHeight || window.innerHeight || 800
-    const topPadding = 70 // Leave space for sticky header (56px) + margin
-    const bottomPadding = 120
-    const availableHeight = Math.max(150, viewportHeight - topPadding - bottomPadding)
-    const startScrollY = Math.max(0, secTop - topPadding)
-    const maxNeededScrollY = Math.max(startScrollY, secBottom - viewportHeight + bottomPadding)
-    const isSectionFullyVisible = secHeight <= availableHeight
+
+    // Center section vertically in the viewport:
+    // (viewportHeight - secHeight) / 2 places the vertical center of the section at screen center.
+    // Ensure section top is at least 80px below viewport top so it never hides behind the sticky header.
+    const centerOffset = (viewportHeight - secHeight) / 2
+    const startScrollY = Math.max(0, Math.min(secTop - 80, secTop - centerOffset))
+
+    const isSectionFullyVisible = secHeight <= Math.max(150, viewportHeight - 160)
+    const maxNeededScrollY = Math.max(startScrollY, secBottom - viewportHeight + 100)
 
     return {
       targetDomIndex,
@@ -352,9 +382,11 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     setIsPlaying(false)
     setScrollY(0, true)
     accumulatedScrollRef.current = 0
+    intendedSectionScrollRef.current = 0
     elapsedRef.current = 0
     currentSecRef.current = -1
     sectionScrollStateRef.current = null
+    lastUserScrollTimeRef.current = 0
     setElapsedSeconds(0)
     onActiveSectionChange?.(-1)
   }
@@ -373,7 +405,9 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     const bounds = calculateSectionScrollBounds(targetDomIndex, sec.startSec)
     if (bounds) {
       sectionScrollStateRef.current = bounds
+      intendedSectionScrollRef.current = bounds.startScrollY
       accumulatedScrollRef.current = bounds.startScrollY
+      lastUserScrollTimeRef.current = 0
       setScrollY(bounds.startScrollY, true)
     }
   }
@@ -401,6 +435,19 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
       // If YouTube reference video is actively synchronizing playback, let YouTube drive the scroll
       const isYtActive = performance.now() - lastYtSyncRef.current < 600
       if (isYtActive) {
+        // Even when YouTube drives playback, if user accidentally scrolled away > 2s ago, smoothly re-center
+        if (mode === 'sections' && sectionScrollStateRef.current) {
+          const timeSinceUserScroll = lastUserScrollTimeRef.current > 0 ? currentTime - lastUserScrollTimeRef.current : Infinity
+          if (timeSinceUserScroll > 2000) {
+            const actualY = getScrollY()
+            const expectedY = intendedSectionScrollRef.current
+            if (Math.abs(actualY - expectedY) > 35) {
+              setScrollY(expectedY, true)
+              accumulatedScrollRef.current = expectedY
+              lastUserScrollTimeRef.current = 0
+            }
+          }
+        }
         animationFrameRef.current = requestAnimationFrame(step)
         return
       }
@@ -453,7 +500,9 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
           const bounds = calculateSectionScrollBounds(targetDomIndex, currentSec.startSec)
           if (bounds) {
             sectionScrollStateRef.current = bounds
+            intendedSectionScrollRef.current = bounds.startScrollY
             accumulatedScrollRef.current = bounds.startScrollY
+            lastUserScrollTimeRef.current = 0
             setScrollY(bounds.startScrollY, true)
           }
         } else if (transitionMode === 'jump' && currentSec) {
@@ -467,8 +516,26 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
               const pxPerSec = (speed || 1.0) * 28 // 1x calibrated speed
               const move = scrollTime * pxPerSec
               const targetY = Math.min(state.endScrollY, state.startScrollY + move)
-              accumulatedScrollRef.current = targetY
-              setScrollY(targetY, false)
+              intendedSectionScrollRef.current = targetY
+
+              // Only auto-scroll if user is not currently touching/scrolling manually
+              if (currentTime - lastUserScrollTimeRef.current > 1500) {
+                accumulatedScrollRef.current = targetY
+                setScrollY(targetY, false)
+              }
+            }
+          }
+
+          // Auto-recenter check: If user accidentally scrolled away during playback,
+          // after 2 seconds of inactivity, smoothly re-center back to the active section.
+          const timeSinceUserScroll = lastUserScrollTimeRef.current > 0 ? currentTime - lastUserScrollTimeRef.current : Infinity
+          if (timeSinceUserScroll > 2000 && sectionScrollStateRef.current) {
+            const actualY = getScrollY()
+            const expectedY = intendedSectionScrollRef.current
+            if (Math.abs(actualY - expectedY) > 35) {
+              setScrollY(expectedY, true)
+              accumulatedScrollRef.current = expectedY
+              lastUserScrollTimeRef.current = 0
             }
           }
         } else if (transitionMode === 'continuous' && currentSec) {
@@ -479,11 +546,24 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
           const nextSecElem = document.getElementById(`song-section-${targetDomIndex + 1}`)
 
           if (secElem) {
-            const curTop = Math.max(0, getElementPageY(secElem) - 70)
-            const nextTop = nextSecElem ? Math.max(0, getElementPageY(nextSecElem) - 70) : maxScroll
+            const curBounds = calculateSectionScrollBounds(targetDomIndex, currentSec.startSec)
+            const curTop = curBounds ? curBounds.startScrollY : Math.max(0, getElementPageY(secElem) - 70)
+            const nextBounds = nextSecElem ? calculateSectionScrollBounds(targetDomIndex + 1, currentSec.endSec) : null
+            const nextTop = nextBounds ? nextBounds.startScrollY : maxScroll
             const targetY = curTop + secProgress * (nextTop - curTop)
-            accumulatedScrollRef.current = targetY
-            setScrollY(targetY, false)
+            intendedSectionScrollRef.current = targetY
+
+            if (currentTime - lastUserScrollTimeRef.current > 1500) {
+              accumulatedScrollRef.current = targetY
+              setScrollY(targetY, false)
+            } else if (currentTime - lastUserScrollTimeRef.current > 2000) {
+              const actualY = getScrollY()
+              if (Math.abs(actualY - targetY) > 35) {
+                setScrollY(targetY, true)
+                accumulatedScrollRef.current = targetY
+                lastUserScrollTimeRef.current = 0
+              }
+            }
           }
         }
 
@@ -568,10 +648,24 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   return (
     <aside
       aria-label="Controles de Auto-Scroll Inteligente"
-      className="no-print fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 flex flex-col items-end gap-2 max-w-[96vw]"
+      className="stage-auto-scroll-hide no-print fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 flex flex-col items-end gap-2 max-w-[96vw]"
     >
-      {/* Expanded Control Panel */}
-      {isExpanded && (
+      {isPillMinimized ? (
+        <button
+          onClick={togglePillMinimized}
+          className="bg-zinc-900/90 hover:bg-zinc-800 backdrop-blur-md border border-zinc-700/80 hover:border-emerald-500/60 text-zinc-300 hover:text-white px-3 py-2 rounded-full shadow-2xl flex items-center gap-2 transition text-xs font-semibold group cursor-pointer"
+          title="Restaurar barra de auto-scroll"
+        >
+          <Sliders className="w-3.5 h-3.5 text-emerald-400 group-hover:rotate-45 transition-transform" />
+          <span>Auto-Scroll</span>
+          {isPlaying && (
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          )}
+        </button>
+      ) : (
+        <>
+          {/* Expanded Control Panel */}
+          {isExpanded && (
         <div className="bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 rounded-3xl p-3.5 sm:p-4 shadow-2xl w-80 sm:w-96 text-zinc-100 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* Header: Mode Selector Tabs */}
           <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
@@ -1009,7 +1103,18 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
         >
           {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
         </button>
+
+        {/* Minimize Pill Button */}
+        <button
+          onClick={togglePillMinimized}
+          title="Minimizar barra de auto-scroll"
+          className="p-1.5 sm:p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition cursor-pointer"
+        >
+          <Minimize2 className="w-4 h-4" />
+        </button>
       </div>
+        </>
+      )}
     </aside>
   )
 }
