@@ -1079,24 +1079,6 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 </button>
               )}
 
-              {/* Compact Key Badge (Click opens drawer for full transposition) */}
-              <button
-                onClick={() => setIsMenuOpen(true)}
-                title="Cambiar tono o transportar (abrir menú)"
-                className="flex items-center gap-1.5 bg-zinc-800/90 hover:bg-zinc-700 px-2.5 py-1.5 rounded-xl border border-zinc-700/80 transition cursor-pointer select-none group"
-              >
-                <Music className={`w-3.5 h-3.5 ${colorConfig.primaryText}`} />
-                <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-300">Tono:</span>
-                <span className={`text-xs font-black ${colorConfig.primaryText}`}>
-                  {effectiveKey}
-                </span>
-                {semitoneShift !== 0 && (
-                  <span className={`text-[10px] font-mono font-bold px-1 rounded border ${colorConfig.primaryBadge}`}>
-                    {semitoneShift > 0 ? `+${semitoneShift}` : semitoneShift}
-                  </span>
-                )}
-              </button>
-
               {/* Botón para entrar al Modo Escenario Zen */}
               <button
                 onClick={handleToggleStageMode}
