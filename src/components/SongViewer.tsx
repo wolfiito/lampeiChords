@@ -299,21 +299,6 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   onNavigateServiceSong,
   onJumpToServiceSongIndex
 }) => {
-  const [isServiceMenuOpen, setIsServiceMenuOpen] = useState(false)
-  const serviceMenuRef = useRef<HTMLDivElement>(null)
-
-  // Close service menu on click outside
-  useEffect(() => {
-    if (!isServiceMenuOpen) return
-    const handleClickOutside = (e: MouseEvent) => {
-      if (serviceMenuRef.current && !serviceMenuRef.current.contains(e.target as Node)) {
-        setIsServiceMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isServiceMenuOpen])
-
   // Shift + Left/Right Arrow navigation between songs in service
   useEffect(() => {
     const handleKeyNav = (e: KeyboardEvent) => {
@@ -922,33 +907,8 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               </button>
             </div>
 
-            {/* Center: Song Title & Service Progress */}
-            <div className="flex items-center justify-center flex-1 min-w-0 px-1 sm:px-2 gap-1.5 sm:gap-2 truncate">
-              {activeService && serviceSongs && serviceSongs.length > 1 && (
-                <div className="flex items-center gap-0.5 bg-zinc-900/90 p-0.5 rounded-lg border border-zinc-800 shrink-0">
-                  <button
-                    type="button"
-                    disabled={currentServiceSongIndex === 0}
-                    onClick={() => onNavigateServiceSong?.('prev')}
-                    className="p-1 text-zinc-400 hover:text-white disabled:opacity-20 rounded transition cursor-pointer"
-                    title="Canción anterior en el servicio"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="text-[10px] font-mono font-black text-amber-400 px-1">
-                    {(currentServiceSongIndex || 0) + 1}/{serviceSongs.length}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={currentServiceSongIndex === serviceSongs.length - 1}
-                    onClick={() => onNavigateServiceSong?.('next')}
-                    className="p-1 text-zinc-400 hover:text-white disabled:opacity-20 rounded transition cursor-pointer"
-                    title="Siguiente canción en el servicio"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
+            {/* Center: Song Title */}
+            <div className="flex items-center justify-center flex-1 min-w-0 px-1 sm:px-2 truncate">
               <span className="text-xs sm:text-sm md:text-base font-extrabold text-zinc-200 truncate tracking-tight">
                 {song.title}
               </span>
@@ -1150,80 +1110,6 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 <span className="hidden sm:inline">Modo Escenario</span>
               </button>
             </div>
-
-            {/* Service Quick Navigation Bar (only when playing inside a Service!) */}
-            {activeService && serviceSongs && serviceSongs.length > 1 && (
-              <div className="flex items-center gap-1 bg-zinc-800/90 p-1 rounded-xl border border-zinc-700/80 shrink-0">
-                <button
-                  type="button"
-                  disabled={currentServiceSongIndex === 0}
-                  onClick={() => onNavigateServiceSong?.('prev')}
-                  className="px-2 py-1 text-xs font-bold text-zinc-300 hover:text-white disabled:opacity-20 rounded-lg hover:bg-zinc-700 transition flex items-center gap-0.5 cursor-pointer"
-                  title="Canción anterior en el servicio"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">Ant.</span>
-                </button>
-
-                {/* Dropdown to jump directly to any song in the service */}
-                <div className="relative" ref={serviceMenuRef}>
-                  <button
-                    type="button"
-                    onClick={() => setIsServiceMenuOpen(o => !o)}
-                    className="px-2 py-1 text-xs font-bold text-emerald-400 hover:bg-zinc-700/60 rounded-lg transition flex items-center gap-1 cursor-pointer"
-                    title="Ver lista de canciones del servicio"
-                  >
-                    <span>{(currentServiceSongIndex || 0) + 1}/{serviceSongs.length}</span>
-                    <span className="hidden xl:inline max-w-[110px] truncate text-zinc-300 font-medium">· {activeService.title}</span>
-                    <ChevronDown className="w-3 h-3 text-zinc-400" />
-                  </button>
-
-                  {isServiceMenuOpen && (
-                    <div className="absolute left-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-700/80 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95">
-                      <div className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-400 border-b border-zinc-800 mb-1.5 flex items-center justify-between">
-                        <span className="truncate">{activeService.title}</span>
-                        <span className="text-emerald-400 font-bold">{serviceSongs.length} canciones</span>
-                      </div>
-                      <div className="max-h-60 overflow-y-auto space-y-1">
-                        {serviceSongs.map((s, idx) => {
-                          const isCur = idx === currentServiceSongIndex
-                          return (
-                            <button
-                              key={`${s.id}-${idx}`}
-                              onClick={() => {
-                                onJumpToServiceSongIndex?.(idx)
-                                setIsServiceMenuOpen(false)
-                              }}
-                              className={`w-full text-left px-2 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                                isCur
-                                  ? 'bg-emerald-600 text-white shadow-sm'
-                                  : 'text-zinc-300 hover:bg-zinc-800'
-                              }`}
-                            >
-                              <span className="truncate">{idx + 1}. {s.title}</span>
-                              <span className="text-[10px] opacity-75 shrink-0 ml-1">
-                                {s.currentKey || s.originalKey}
-                              </span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  disabled={currentServiceSongIndex === serviceSongs.length - 1}
-                  onClick={() => onNavigateServiceSong?.('next')}
-                  className="px-2 py-1 text-xs font-bold text-zinc-300 hover:text-white disabled:opacity-20 rounded-lg hover:bg-zinc-700 transition flex items-center gap-0.5 cursor-pointer"
-                  title="Siguiente canción en el servicio"
-                >
-                  <span className="hidden md:inline">Sig.</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
 
             {/* In-Header AutoScroll Bar (when minimized to top bar) */}
             {isScrollMinimized && (
@@ -1449,57 +1335,71 @@ export const SongViewer: React.FC<SongViewerProps> = ({
             </div>
           )}
 
-          {/* Service End Banner / Next Song Card */}
+          {/* Sutil Navegación de Servicio al Final de la Canción */}
           {activeService && serviceSongs && serviceSongs.length > 1 && (
-            <div className="mt-12 mb-8 pt-8 border-t border-zinc-800/80 flex flex-col items-center justify-center text-center">
-              {currentServiceSongIndex !== undefined && currentServiceSongIndex < serviceSongs.length - 1 ? (
-                <div className="bg-zinc-900/95 border border-zinc-700/80 rounded-3xl p-5 sm:p-6 shadow-2xl max-w-md w-full space-y-3">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 uppercase tracking-widest">
-                    <span>Fin de esta canción</span>
-                    <span className="text-emerald-400 font-mono">
-                      {(currentServiceSongIndex || 0) + 1} de {serviceSongs.length}
+            <div className="mt-14 mb-10 pt-6 border-t border-zinc-800/80 max-w-xl mx-auto px-4 select-none">
+              <div className="flex items-center justify-between gap-4">
+                {/* Botón Anterior */}
+                <button
+                  type="button"
+                  disabled={currentServiceSongIndex === 0}
+                  onClick={() => {
+                    onNavigateServiceSong?.('prev')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                  className="flex flex-col items-center justify-center min-w-[64px] py-2 px-3 rounded-2xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-600 border border-zinc-800/80 transition cursor-pointer active:scale-95 group"
+                  title="Canción anterior en el servicio"
+                >
+                  <ChevronLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
+                  <span className="text-[11px] font-black tracking-wider uppercase">ant</span>
+                </button>
+
+                {/* Info Central */}
+                <div className="flex flex-col items-center text-center px-2 min-w-0 flex-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 truncate max-w-[200px]">
+                    {activeService.title}
+                  </span>
+                  <span className="text-xs font-mono font-bold text-zinc-300">
+                    {(currentServiceSongIndex || 0) + 1} / {serviceSongs.length}
+                  </span>
+                  {currentServiceSongIndex !== undefined && currentServiceSongIndex < serviceSongs.length - 1 ? (
+                    <span className="text-[11px] text-emerald-400 font-semibold truncate max-w-[220px] mt-0.5">
+                      Sig: {serviceSongs[currentServiceSongIndex + 1]?.title}
                     </span>
-                  </div>
-                  <div className="py-1">
-                    <span className="text-xs text-zinc-500 block mb-0.5">Siguiente en "{activeService.title}":</span>
-                    <h4 className="text-lg sm:text-xl font-black text-white">
-                      {serviceSongs[(currentServiceSongIndex || 0) + 1]?.title}
-                    </h4>
-                    <span className="text-xs text-emerald-400 font-bold">
-                      Tono: {serviceSongs[(currentServiceSongIndex || 0) + 1]?.currentKey || serviceSongs[(currentServiceSongIndex || 0) + 1]?.originalKey}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onNavigateServiceSong?.('next')
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
-                    }}
-                    className={`w-full py-3 px-4 ${colorConfig.primaryButton} font-black text-sm rounded-2xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer active:scale-98`}
-                  >
-                    <span>Pasar a la siguiente canción</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                  ) : (
+                    <div className="flex flex-col items-center mt-0.5">
+                      <span className="text-[11px] text-amber-400 font-semibold">
+                        ✨ Fin del Servicio
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onJumpToServiceSongIndex?.(0)
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }}
+                        className="text-[10px] text-zinc-400 hover:text-white underline cursor-pointer mt-0.5"
+                      >
+                        Volver a la 1ª canción
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 text-center max-w-md w-full space-y-2">
-                  <span className="text-sm font-black text-emerald-400 block">✨ Fin del Servicio</span>
-                  <p className="text-xs text-zinc-400">
-                    Has completado las {serviceSongs.length} canciones de <strong>{activeService.title}</strong>.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onJumpToServiceSongIndex?.(0)
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
-                    }}
-                    className="mt-2 py-2 px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Volver a la 1ª canción</span>
-                  </button>
-                </div>
-              )}
+
+                {/* Botón Siguiente */}
+                <button
+                  type="button"
+                  disabled={currentServiceSongIndex === serviceSongs.length - 1}
+                  onClick={() => {
+                    onNavigateServiceSong?.('next')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                  className="flex flex-col items-center justify-center min-w-[64px] py-2 px-3 rounded-2xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-600 border border-zinc-800/80 transition cursor-pointer active:scale-95 group"
+                  title="Siguiente canción en el servicio"
+                >
+                  <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                  <span className="text-[11px] font-black tracking-wider uppercase">sig</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1536,6 +1436,45 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Servicio Activo (Selector Rápido de Canciones) */}
+              {activeService && serviceSongs && serviceSongs.length > 1 && (
+                <div className="space-y-2.5 p-3.5 bg-zinc-950 rounded-2xl border border-zinc-800">
+                  <div className="flex items-center justify-between">
+                    <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider flex items-center gap-1.5`}>
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span className="truncate max-w-[190px]">Servicio: {activeService.title}</span>
+                    </label>
+                    <span className="text-[11px] font-mono font-bold text-emerald-400 shrink-0">
+                      {(currentServiceSongIndex || 0) + 1} de {serviceSongs.length}
+                    </span>
+                  </div>
+                  <div className="max-h-52 overflow-y-auto space-y-1 pr-1">
+                    {serviceSongs.map((s, idx) => {
+                      const isCur = idx === currentServiceSongIndex
+                      return (
+                        <button
+                          key={`${s.id}-${idx}`}
+                          onClick={() => {
+                            onJumpToServiceSongIndex?.(idx)
+                            setIsMenuOpen(false)
+                          }}
+                          className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                            isCur
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                          }`}
+                        >
+                          <span className="truncate">{idx + 1}. {s.title}</span>
+                          <span className="text-[10px] opacity-75 shrink-0 ml-1 font-mono">
+                            {s.currentKey || s.originalKey}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Group 1: Tono y Transporte Musical */}
               <div className="space-y-3 p-3.5 bg-zinc-950 rounded-2xl border border-zinc-800">
