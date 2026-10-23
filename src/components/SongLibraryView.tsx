@@ -358,7 +358,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+              <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/60">
                 {filteredSongs.map(song => {
                   const displayKey = song.currentKey || song.originalKey || 'C'
 
@@ -366,108 +366,82 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                     <div
                       key={song.id}
                       onClick={() => onSelectSong(song.id)}
-                      className="group bg-zinc-900/90 hover:bg-zinc-850 border border-zinc-800/80 hover:border-emerald-600/50 rounded-2xl p-4 sm:p-5 transition-all duration-200 cursor-pointer shadow-md hover:shadow-xl hover:shadow-emerald-950/20 flex flex-col justify-between"
+                      className="py-3 px-2 sm:px-4 flex items-center justify-between gap-3 hover:bg-zinc-900/50 transition cursor-pointer group"
                     >
-                      <div>
-                        {/* Header: Title and Tonalidad badge */}
-                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <h3 className="font-extrabold text-base sm:text-lg text-white transition-colors line-clamp-1">
+                      {/* Left: Info de la canción */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-sm sm:text-base text-zinc-100 group-hover:text-emerald-400 transition-colors truncate">
                             {song.title}
-                          </h3>
-                          <span className={`shrink-0 text-xs font-black px-2.5 py-0.5 rounded-lg border transition-colors ${themeConfig.primaryBadge}`}>
+                          </span>
+                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${themeConfig.primaryBadge} shrink-0`}>
                             {displayKey}
                           </span>
-                        </div>
-
-                        {/* Artist */}
-                        <p className="text-xs text-zinc-400 font-medium mb-3 line-clamp-1">
-                          {song.artist || 'Artista desconocido'}
-                        </p>
-
-                        {/* Badges: Capo, BPM, Tags */}
-                        <div className="flex flex-wrap items-center gap-1.5 mb-4">
                           {song.capo > 0 && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300">
-                              🎸 Capo {song.capo}
-                            </span>
-                          )}
-                          {song.tempo && (
-                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-zinc-800 border border-zinc-700/60 text-zinc-300">
-                              ⏱️ {song.tempo} bpm
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 shrink-0">
+                              Capo {song.capo}
                             </span>
                           )}
                           {song.youtubeUrl && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-500/15 border border-red-500/30 text-red-400 flex items-center gap-1" title="Incluye audio/video de referencia">
+                            <span className="text-[10px] text-red-400 flex items-center gap-0.5 shrink-0" title="Video de referencia">
                               <YouTubeIcon className="w-3.5 h-3.5 text-red-500" />
-                              <span>Video</span>
                             </span>
                           )}
-                          {song.tags?.slice(0, 2).map(tag => (
-                            <span
-                              key={tag}
-                              className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-400"
-                            >
-                              #{tag}
+                        </div>
+
+                        <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5 truncate">
+                          <span>{song.artist || 'Artista desconocido'}</span>
+                          {song.tempo && <span>· {song.tempo} bpm</span>}
+                          {song.tags && song.tags.length > 0 && (
+                            <span className="text-zinc-500 hidden sm:inline">
+                              · {song.tags.slice(0, 2).map(t => `#${t}`).join(' ')}
                             </span>
-                          ))}
+                          )}
                         </div>
                       </div>
 
-                      {/* Footer Actions on Card */}
-                      <div className="flex items-center justify-between pt-3 border-t border-zinc-800/80 mt-auto gap-2">
-                        {/* Primary Play Button */}
+                      {/* Right: Actions */}
+                      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
                         <button
                           type="button"
-                          onClick={e => {
-                            e.stopPropagation()
-                            onSelectSong(song.id)
-                          }}
-                          className={`flex-1 py-1.5 px-3 ${themeConfig.cardButton} rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer active:scale-98`}
+                          onClick={() => onSelectSong(song.id)}
+                          className="p-1.5 sm:px-3 sm:py-1 bg-zinc-850 hover:bg-emerald-600 text-zinc-300 hover:text-white rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer active:scale-95"
+                          title="Abrir y tocar"
                         >
                           <Play className="w-3.5 h-3.5 fill-current" />
-                          <span>Abrir y Tocar</span>
+                          <span className="hidden sm:inline">Tocar</span>
                         </button>
 
-                        {/* Secondary Actions */}
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={e => {
-                              e.stopPropagation()
-                              onEditSong(song.id)
-                            }}
-                            title="Editar canción"
-                            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
+                        <button
+                          type="button"
+                          onClick={() => onEditSong(song.id)}
+                          title="Editar canción"
+                          className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
 
-                          <button
-                            type="button"
-                            onClick={e => {
-                              e.stopPropagation()
-                              onDuplicateSong(song.id)
-                            }}
-                            title="Duplicar canción"
-                            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
+                        <button
+                          type="button"
+                          onClick={() => onDuplicateSong(song.id)}
+                          title="Duplicar canción"
+                          className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
 
-                          <button
-                            type="button"
-                            onClick={e => {
-                              e.stopPropagation()
-                              if (confirm(`¿Eliminar "${song.title}"?`)) {
-                                onDeleteSong(song.id)
-                              }
-                            }}
-                            title="Eliminar canción"
-                            className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`¿Eliminar "${song.title}"?`)) {
+                              onDeleteSong(song.id)
+                            }
+                          }}
+                          title="Eliminar canción"
+                          className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   )

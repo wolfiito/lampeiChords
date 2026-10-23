@@ -78,7 +78,7 @@ export const ServiceSongPickerModal: React.FC<ServiceSongPickerModalProps> = ({
         </div>
 
         {/* Song List */}
-        <div className="overflow-y-auto space-y-1.5 pr-1 flex-1">
+        <div className="overflow-y-auto divide-y divide-zinc-800/60 border-y border-zinc-800/60 pr-1 flex-1">
           {filteredSongs.length === 0 ? (
             <div className="text-center py-8 text-zinc-500 text-xs">
               No se encontraron canciones con ese criterio.
@@ -91,14 +91,14 @@ export const ServiceSongPickerModal: React.FC<ServiceSongPickerModalProps> = ({
               return (
                 <div
                   key={song.id}
-                  className="p-2.5 bg-zinc-950/70 hover:bg-zinc-800/60 rounded-xl border border-zinc-800 flex items-center justify-between gap-3 transition"
+                  className="py-2.5 px-2 hover:bg-zinc-800/40 flex items-center justify-between gap-3 transition"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-white truncate">
                         {song.title}
                       </span>
-                      <span className={`text-[10px] font-black px-1.5 py-0.2 rounded border ${themeConfig.primaryBadge}`}>
+                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${themeConfig.primaryBadge}`}>
                         {displayKey}
                       </span>
                     </div>
