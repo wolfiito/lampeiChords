@@ -13,7 +13,6 @@ import {
   MapPin,
   ListMusic
 } from 'lucide-react'
-import { YouTubeIcon } from './YouTubeIcon'
 import type { Song } from '../types/song'
 import type { ServiceItem } from '../types/service'
 import { useTheme } from '../context/ThemeContext'
@@ -248,12 +247,6 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
               <span>Servicios ({services.length})</span>
             </button>
           </div>
-
-          <div className="text-xs text-zinc-400">
-            {libraryTab === 'songs'
-              ? 'Todas las canciones de tu repertorio'
-              : 'Listas organizadas por fecha, iglesia o ensayo'}
-          </div>
         </div>
 
         {/* Search & Filter Bar (Sin caja) */}
@@ -369,17 +362,12 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                       {/* Left: Info de la canción */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-sm sm:text-base text-zinc-100 group-hover:text-emerald-400 transition-colors truncate">
+                          <span className={`font-bold text-sm sm:text-base ${themeConfig.primaryText} hover:brightness-125 transition-colors truncate`}>
                             {song.title}
                           </span>
                           {song.capo > 0 && (
                             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 shrink-0">
                               Capo {song.capo}
-                            </span>
-                          )}
-                          {song.youtubeUrl && (
-                            <span className="text-[10px] text-red-400 flex items-center gap-0.5 shrink-0" title="Video de referencia">
-                              <YouTubeIcon className="w-3.5 h-3.5 text-red-500" />
                             </span>
                           )}
                         </div>

@@ -181,7 +181,7 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm sm:text-base text-zinc-200 group-hover:text-white truncate">
+                      <span className={`font-bold text-sm sm:text-base ${themeConfig.primaryText} hover:brightness-125 transition-colors truncate`}>
                         {song.title}
                       </span>
                       <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${themeConfig.primaryBadge} shrink-0`}>
