@@ -6,8 +6,6 @@ import {
   ChevronUp,
   ChevronDown,
   Trash2,
-  Calendar,
-  MapPin,
   Edit3,
   Music
 } from 'lucide-react'
@@ -65,138 +63,102 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
     onReorderSongs(service.id, newIds)
   }
 
-  const getTypeBadge = (type?: string) => {
-    switch (type) {
-      case 'ensayo':
-        return { label: '🎸 Ensayo', bg: 'bg-blue-500/10 border-blue-500/30 text-blue-400' }
-      case 'evento':
-        return { label: '✨ Especial', bg: 'bg-purple-500/10 border-purple-500/30 text-purple-400' }
-      default:
-        return { label: '⛪ Servicio', bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' }
-    }
-  }
-
-  const typeInfo = getTypeBadge(service.type)
-
   return (
-    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-6 sm:py-8 w-full">
-      {/* Top Navigation & Actions */}
-      <div className="flex items-center justify-between gap-2 mb-6">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-xs font-bold text-zinc-400 hover:text-white bg-zinc-900/90 hover:bg-zinc-800 px-3 py-2 rounded-xl border border-zinc-800 transition cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4 text-emerald-400" />
-          <span>Volver a Servicios</span>
-        </button>
+    <div className="max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-6 w-full">
+      {/* Top Header: Navigation & Service Info */}
+      <div className="flex items-center justify-between gap-3 mb-6 pb-4 border-b border-zinc-800/80">
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={onBack}
+            className="p-2 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-zinc-800 transition cursor-pointer shrink-0"
+            title="Volver a Servicios"
+          >
+            <ArrowLeft className="w-4 h-4 text-emerald-400" />
+          </button>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-black text-white truncate leading-tight">
+              {service.title}
+            </h1>
+            <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5 truncate">
+              <span>{serviceSongObjects.length} {serviceSongObjects.length === 1 ? 'canción' : 'canciones'}</span>
+              {service.date && <span>· {service.date}</span>}
+              {service.location && <span>· {service.location}</span>}
+            </div>
+          </div>
+        </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
+          {serviceSongObjects.length > 0 && (
+            <button
+              onClick={() => onStartService(0)}
+              className={`py-2 px-3.5 ${themeConfig.primaryButton} rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer active:scale-95`}
+              title="Iniciar servicio desde la primera canción"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Iniciar</span>
+            </button>
+          )}
+
           <button
             onClick={() => onEditService(service)}
             className="p-2 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-zinc-800 transition cursor-pointer"
-            title="Editar datos del servicio"
+            title="Editar servicio"
           >
             <Edit3 className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Service Header Card */}
-      <div className="bg-zinc-900/95 border border-zinc-800 rounded-3xl p-5 sm:p-7 shadow-xl mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full border ${typeInfo.bg}`}>
-                {typeInfo.label}
-              </span>
-              {service.date && (
-                <span className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1 bg-zinc-800/80 px-2.5 py-0.5 rounded-full border border-zinc-700/60">
-                  <Calendar className="w-3 h-3 text-zinc-400" />
-                  <span>{service.date}</span>
-                </span>
-              )}
-              {service.location && (
-                <span className="text-[11px] font-semibold text-zinc-300 flex items-center gap-1 bg-zinc-800/80 px-2.5 py-0.5 rounded-full border border-zinc-700/60">
-                  <MapPin className="w-3 h-3 text-amber-400" />
-                  <span>{service.location}</span>
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {service.title}
-            </h1>
-
-            {service.notes && (
-              <p className="text-xs sm:text-sm text-zinc-400 italic">
-                "{service.notes}"
-              </p>
-            )}
-          </div>
-
-          {/* Big Start Service Button */}
-          {serviceSongObjects.length > 0 && (
-            <button
-              onClick={() => onStartService(0)}
-              className={`py-3 px-6 ${themeConfig.primaryButton} rounded-2xl text-sm font-black shadow-lg transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 shrink-0`}
-            >
-              <Play className="w-5 h-5 fill-current" />
-              <span>Iniciar Servicio</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Ordered Songs Header & Add Button */}
-      <div className="flex items-center justify-between gap-2 mb-3.5">
+      {/* Ordered Songs Header & + Button */}
+      <div className="flex items-center justify-between gap-2 mb-3 px-1">
         <div className="flex items-center gap-2">
-          <h2 className="text-base sm:text-lg font-black text-white">
+          <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-wider">
             Orden de Canciones
           </h2>
-          <span className={`text-xs font-bold px-2 py-0.2 rounded-full border ${themeConfig.primaryBadge}`}>
-            {serviceSongObjects.length} {serviceSongObjects.length === 1 ? 'canción' : 'canciones'}
-          </span>
         </div>
 
+        {/* Solo el botón + */}
         <button
           onClick={() => setIsPickerOpen(true)}
-          className={`px-3 py-1.5 ${themeConfig.primaryButton} text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer active:scale-95`}
+          className={`p-2 ${themeConfig.primaryButton} text-white rounded-xl shadow transition flex items-center justify-center cursor-pointer active:scale-95`}
+          title="Agregar canción"
+          aria-label="Agregar canción"
         >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Agregar Canción</span>
+          <Plus className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Song List */}
+      {/* Song List (Lista limpia, sin cajas) */}
       {serviceSongObjects.length === 0 ? (
-        <div className="bg-zinc-900/50 border border-dashed border-zinc-800 rounded-3xl p-8 text-center">
-          <Music className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+        <div className="py-12 border border-dashed border-zinc-800/80 rounded-2xl p-6 text-center text-zinc-500">
+          <Music className="w-8 h-8 text-zinc-600 mx-auto mb-2 opacity-40" />
           <h3 className="text-sm font-bold text-white mb-1">
             Este servicio aún no tiene canciones
           </h3>
           <p className="text-xs text-zinc-400 mb-4">
-            Agrega las canciones de tu repertorio en el orden que las vas a tocar.
+            Toca el botón + para agregar canciones de tu repertorio.
           </p>
           <button
             onClick={() => setIsPickerOpen(true)}
-            className={`px-4 py-2 ${themeConfig.primaryButton} text-xs font-bold rounded-xl transition`}
+            className={`p-2.5 ${themeConfig.primaryButton} text-white rounded-xl shadow transition inline-flex items-center justify-center cursor-pointer active:scale-95`}
+            title="Agregar canción"
           >
-            + Seleccionar Canciones
+            <Plus className="w-5 h-5" />
           </button>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/60">
           {serviceSongObjects.map(({ song, id }, index) => {
             if (!song) {
               return (
                 <div
                   key={`${id}-${index}`}
-                  className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-3 flex items-center justify-between gap-3 text-zinc-500 text-xs"
+                  className="py-2.5 px-2 flex items-center justify-between gap-3 text-zinc-500 text-xs"
                 >
                   <span>Canción eliminada del catálogo ({id})</span>
                   <button
                     onClick={() => onRemoveSong(service.id, index)}
-                    className="p-1 hover:text-rose-400 transition"
+                    className="p-1 hover:text-rose-400 transition cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -209,24 +171,24 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
             return (
               <div
                 key={`${song.id}-${index}`}
-                className="bg-zinc-900/90 hover:bg-zinc-850 border border-zinc-800/80 hover:border-zinc-700 rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 transition shadow-sm group"
+                className="py-2.5 px-2 sm:px-3 flex items-center justify-between gap-2.5 sm:gap-4 hover:bg-zinc-900/50 transition group"
               >
                 {/* Number & Song Info */}
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-zinc-800 border border-zinc-700/80 flex items-center justify-center font-black text-xs sm:text-sm text-zinc-300 shrink-0">
+                <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
+                  <span className="font-mono text-xs sm:text-sm font-bold text-zinc-500 group-hover:text-zinc-300 w-5 text-right shrink-0">
                     {index + 1}
-                  </div>
+                  </span>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-sm sm:text-base text-white truncate">
+                      <span className="font-bold text-sm sm:text-base text-zinc-200 group-hover:text-white truncate">
                         {song.title}
                       </span>
-                      <span className={`text-[10px] font-black px-1.5 py-0.2 rounded border ${themeConfig.primaryBadge}`}>
+                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${themeConfig.primaryBadge} shrink-0`}>
                         {displayKey}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-zinc-400 truncate">
+                    <div className="flex items-center gap-2 text-[11px] text-zinc-500 truncate">
                       <span>{song.artist || 'Artista'}</span>
                       {song.tempo && <span>· {song.tempo} bpm</span>}
                       {song.capo > 0 && <span>· Capo {song.capo}</span>}
@@ -237,24 +199,24 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
                 {/* Actions: Reorder, Play this, Remove */}
                 <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                   {/* Reorder Buttons */}
-                  <div className="flex items-center bg-zinc-950 p-0.5 rounded-xl border border-zinc-800">
+                  <div className="flex items-center">
                     <button
                       type="button"
                       disabled={index === 0}
                       onClick={() => moveUp(index)}
-                      className="p-1 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:text-zinc-400 transition cursor-pointer"
+                      className="p-1 text-zinc-500 hover:text-white disabled:opacity-20 transition cursor-pointer"
                       title="Mover arriba"
                     >
-                      <ChevronUp className="w-3.5 h-3.5" />
+                      <ChevronUp className="w-4 h-4" />
                     </button>
                     <button
                       type="button"
                       disabled={index === serviceSongObjects.length - 1}
                       onClick={() => moveDown(index)}
-                      className="p-1 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:text-zinc-400 transition cursor-pointer"
+                      className="p-1 text-zinc-500 hover:text-white disabled:opacity-20 transition cursor-pointer"
                       title="Mover abajo"
                     >
-                      <ChevronDown className="w-3.5 h-3.5" />
+                      <ChevronDown className="w-4 h-4" />
                     </button>
                   </div>
 
@@ -262,7 +224,7 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onStartService(index)}
-                    className="p-2 sm:px-3 sm:py-1.5 bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                    className="p-1.5 sm:px-2.5 sm:py-1 bg-zinc-850 hover:bg-emerald-600 text-zinc-300 hover:text-white rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer active:scale-95"
                     title="Tocar desde esta canción"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
@@ -273,10 +235,10 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onRemoveSong(service.id, index)}
-                    className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                    className="p-1.5 text-zinc-600 hover:text-rose-400 transition cursor-pointer"
                     title="Quitar de este servicio"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

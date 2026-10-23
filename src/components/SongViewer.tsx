@@ -1335,75 +1335,71 @@ export const SongViewer: React.FC<SongViewerProps> = ({
             </div>
           )}
 
-          {/* Sutil Navegación de Servicio al Final de la Canción */}
-          {activeService && serviceSongs && serviceSongs.length > 1 && (
-            <div className="mt-14 mb-10 pt-6 border-t border-zinc-800/80 max-w-xl mx-auto px-4 select-none">
-              <div className="flex items-center justify-between gap-4">
-                {/* Botón Anterior */}
-                <button
-                  type="button"
-                  disabled={currentServiceSongIndex === 0}
-                  onClick={() => {
-                    onNavigateServiceSong?.('prev')
-                    window.scrollTo({ top: 0, behavior: 'smooth' })
-                  }}
-                  className="flex flex-col items-center justify-center min-w-[64px] py-2 px-3 rounded-2xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-600 border border-zinc-800/80 transition cursor-pointer active:scale-95 group"
-                  title="Canción anterior en el servicio"
-                >
-                  <ChevronLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
-                  <span className="text-[11px] font-black tracking-wider uppercase">ant</span>
-                </button>
-
-                {/* Info Central */}
-                <div className="flex flex-col items-center text-center px-2 min-w-0 flex-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 truncate max-w-[200px]">
-                    {activeService.title}
-                  </span>
-                  <span className="text-xs font-mono font-bold text-zinc-300">
-                    {(currentServiceSongIndex || 0) + 1} / {serviceSongs.length}
-                  </span>
-                  {currentServiceSongIndex !== undefined && currentServiceSongIndex < serviceSongs.length - 1 ? (
-                    <span className="text-[11px] text-emerald-400 font-semibold truncate max-w-[220px] mt-0.5">
-                      Sig: {serviceSongs[currentServiceSongIndex + 1]?.title}
-                    </span>
-                  ) : (
-                    <div className="flex flex-col items-center mt-0.5">
-                      <span className="text-[11px] text-amber-400 font-semibold">
-                        ✨ Fin del Servicio
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onJumpToServiceSongIndex?.(0)
-                          window.scrollTo({ top: 0, behavior: 'smooth' })
-                        }}
-                        className="text-[10px] text-zinc-400 hover:text-white underline cursor-pointer mt-0.5"
-                      >
-                        Volver a la 1ª canción
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Botón Siguiente */}
-                <button
-                  type="button"
-                  disabled={currentServiceSongIndex === serviceSongs.length - 1}
-                  onClick={() => {
-                    onNavigateServiceSong?.('next')
-                    window.scrollTo({ top: 0, behavior: 'smooth' })
-                  }}
-                  className="flex flex-col items-center justify-center min-w-[64px] py-2 px-3 rounded-2xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-600 border border-zinc-800/80 transition cursor-pointer active:scale-95 group"
-                  title="Siguiente canción en el servicio"
-                >
-                  <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                  <span className="text-[11px] font-black tracking-wider uppercase">sig</span>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Barra Fija de Navegación del Servicio en la parte inferior */}
+      {activeService && serviceSongs && serviceSongs.length > 1 && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800/80 px-4 py-1.5 select-none shadow-2xl">
+          <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
+            {/* Botón Anterior */}
+            <button
+              type="button"
+              disabled={currentServiceSongIndex === 0}
+              onClick={() => {
+                onNavigateServiceSong?.('prev')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              className="flex flex-col items-center justify-center min-w-[54px] py-1 px-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-600 border border-zinc-800/70 transition cursor-pointer active:scale-95 group"
+              title="Canción anterior en el servicio"
+            >
+              <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              <span className="text-[10px] font-black tracking-wider uppercase">ant</span>
+            </button>
+
+            {/* Info Central */}
+            <div className="flex flex-col items-center text-center px-2 min-w-0 flex-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 truncate max-w-[180px] sm:max-w-xs">
+                {activeService.title}
+              </span>
+              <span className="text-xs font-mono font-bold text-zinc-200 leading-tight">
+                {(currentServiceSongIndex || 0) + 1} / {serviceSongs.length}
+              </span>
+              {currentServiceSongIndex !== undefined && currentServiceSongIndex < serviceSongs.length - 1 ? (
+                <span className="text-[10px] text-emerald-400 font-semibold truncate max-w-[200px] sm:max-w-xs">
+                  Sig: {serviceSongs[currentServiceSongIndex + 1]?.title}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onJumpToServiceSongIndex?.(0)
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                  className="text-[10px] text-amber-400 hover:underline cursor-pointer"
+                >
+                  ✨ Fin · Reiniciar
+                </button>
+              )}
+            </div>
+
+            {/* Botón Siguiente */}
+            <button
+              type="button"
+              disabled={currentServiceSongIndex === serviceSongs.length - 1}
+              onClick={() => {
+                onNavigateServiceSong?.('next')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              className="flex flex-col items-center justify-center min-w-[54px] py-1 px-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-600 border border-zinc-800/70 transition cursor-pointer active:scale-95 group"
+              title="Siguiente canción en el servicio"
+            >
+              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <span className="text-[10px] font-black tracking-wider uppercase">sig</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 
         HAMBURGER DRAWER (Slide-out menu for all secondary tools)
