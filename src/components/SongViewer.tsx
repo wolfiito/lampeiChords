@@ -332,7 +332,24 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   })
 
   const notation: NotationSystem = 'anglo'
-  const [fontSize, setFontSize] = useState<number>(18)
+  const [fontSize, setFontSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('chords_font_size')
+      if (saved !== null) {
+        const val = Number(saved)
+        if (!isNaN(val) && val >= 12 && val <= 36) {
+          return val
+        }
+      }
+    } catch {}
+    return 18
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('chords_font_size', String(fontSize))
+    } catch {}
+  }, [fontSize])
   const [numColumns, setNumColumns] = useState<1 | 2>(() => {
     if (typeof window !== 'undefined' && window.innerWidth >= 768) {
       return 2
