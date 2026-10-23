@@ -29,9 +29,7 @@ import { calculateSongTiming, type SectionTiming } from '../music/songTiming'
 import {
   transposeChord,
   CHROMATIC_SHARPS_ANGLO,
-  CHROMATIC_SHARPS_LATIN,
   CHROMATIC_FLATS_ANGLO,
-  CHROMATIC_FLATS_LATIN,
   getDistanceBetweenKeys
 } from '../music/musicTheory'
 import { ChordDiagram } from './ChordDiagram'
@@ -307,7 +305,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     return 0
   })
 
-  const [notation, setNotation] = useState<NotationSystem>('anglo')
+  const notation: NotationSystem = 'anglo'
   const [fontSize, setFontSize] = useState<number>(18)
   const [numColumns, setNumColumns] = useState<1 | 2>(() => {
     if (typeof window !== 'undefined' && window.innerWidth >= 768) {
@@ -581,11 +579,8 @@ export const SongViewer: React.FC<SongViewerProps> = ({
   }, [song.currentKey, song.originalKey, semitoneShift, accidental, notation])
 
   const keyOptions = useMemo(() => {
-    if (notation === 'latin') {
-      return accidental === 'flat' ? CHROMATIC_FLATS_LATIN : CHROMATIC_SHARPS_LATIN
-    }
     return accidental === 'flat' ? CHROMATIC_FLATS_ANGLO : CHROMATIC_SHARPS_ANGLO
-  }, [notation, accidental])
+  }, [accidental])
 
   const handleKeySelect = (targetKey: string) => {
     const baseKey = song.currentKey || song.originalKey || 'C'
@@ -1402,7 +1397,35 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-1.5 text-[11px] text-zinc-400 font-medium">
                     <span>Elegir tono directo:</span>
-                    <span>Orig: <strong className="text-zinc-200">{song.currentKey || song.originalKey || 'C'}</strong></span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-zinc-500 hidden sm:inline">Orig: <strong className="text-zinc-300">{song.currentKey || song.originalKey || 'C'}</strong></span>
+                      <div className="flex items-center bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => setAccidental('sharp')}
+                          className={`px-2 py-0.5 rounded font-bold cursor-pointer transition ${
+                            accidental === 'sharp'
+                              ? `${colorConfig.primaryBg} text-white shadow-xs`
+                              : 'text-zinc-400 hover:text-white'
+                          }`}
+                          title="Mostrar escala con sostenidos (♯)"
+                        >
+                          ♯ Sost.
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAccidental('flat')}
+                          className={`px-2 py-0.5 rounded font-bold cursor-pointer transition ${
+                            accidental === 'flat'
+                              ? `${colorConfig.primaryBg} text-white shadow-xs`
+                              : 'text-zinc-400 hover:text-white'
+                          }`}
+                          title="Mostrar escala con bemoles (♭)"
+                        >
+                          ♭ Bem.
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-1">
                     {keyOptions.map(k => {
@@ -1429,8 +1452,8 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 </p>
               </div>
 
-              {/* Group 2: Columns Layout */}
-              <div className="space-y-2">
+              {/* Group 2: Columns Layout (Oculto en celular porque las 2 columnas requieren pantalla ancha) */}
+              <div className="hidden md:block space-y-2">
                 <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider block`}>
                   Columnas en Pantalla
                 </label>
@@ -1541,64 +1564,10 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 </div>
               </div>
 
-              {/* Group 4: Notation System */}
+              {/* Group 4: Modo Escenario y Colores */}
               <div className="space-y-2.5">
                 <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider block`}>
-                  Notación Musical
-                </label>
-                {/* Notation System */}
-                <div className="grid grid-cols-2 gap-2 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
-                  <button
-                    onClick={() => setNotation('anglo')}
-                    className={`py-2 px-2.5 text-xs font-bold rounded-lg transition ${
-                      notation === 'anglo'
-                        ? `${colorConfig.primaryBg} text-white shadow-md`
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    C D E (Americano)
-                  </button>
-                  <button
-                    onClick={() => setNotation('latin')}
-                    className={`py-2 px-2.5 text-xs font-bold rounded-lg transition ${
-                      notation === 'latin'
-                        ? `${colorConfig.primaryBg} text-white shadow-md`
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    Do Re Mi (Latino)
-                  </button>
-                </div>
-
-                {/* Sharps vs Flats */}
-                <div className="grid grid-cols-2 gap-2 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
-                  <button
-                    onClick={() => setAccidental('sharp')}
-                    className={`py-2 px-2.5 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1 ${
-                      accidental === 'sharp'
-                        ? `${colorConfig.primaryBg} text-white shadow-md`
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    <span>♯ Sostenidos</span>
-                  </button>
-                  <button
-                    onClick={() => setAccidental('flat')}
-                    className={`py-2 px-2.5 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1 ${
-                      accidental === 'flat'
-                        ? `${colorConfig.primaryBg} text-white shadow-md`
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    <span>♭ Bemoles</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Group 5: Stage Mode & Fullscreen */}
-              <div className="space-y-2.5">
-                <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider block`}>
-                  Pantalla y Atril
+                  Modo Escenario y Colores
                 </label>
                 {/* Stage Mode */}
                 <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 space-y-3">
@@ -1608,7 +1577,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                         <Sparkles className={`w-3.5 h-3.5 ${colorConfig.primaryText}`} />
                         <span>Modo Escenario Zen</span>
                       </div>
-                      <span className="text-[11px] text-zinc-400">Cero distracciones y pantalla completa</span>
+                      <span className="text-[11px] text-zinc-400">Cero distracciones y vista limpia</span>
                     </div>
                     <button
                       onClick={handleToggleStageMode}
@@ -1648,27 +1617,6 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                       })}
                     </div>
                   </div>
-                </div>
-
-                {/* Fullscreen */}
-                <div className="flex items-center justify-between p-3 bg-zinc-950 rounded-xl border border-zinc-800">
-                  <div>
-                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                      {isFullscreen ? (
-                        <Minimize className={`w-3.5 h-3.5 ${colorConfig.primaryText}`} />
-                      ) : (
-                        <Maximize className={`w-3.5 h-3.5 ${colorConfig.primaryText}`} />
-                      )}
-                      <span>Pantalla Completa</span>
-                    </div>
-                    <span className="text-[11px] text-zinc-400">Maximiza el espacio para atril</span>
-                  </div>
-                  <button
-                    onClick={toggleFullscreen}
-                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white text-xs font-bold rounded-lg border border-zinc-700 transition"
-                  >
-                    {isFullscreen ? 'Salir' : 'Activar'}
-                  </button>
                 </div>
               </div>
 
