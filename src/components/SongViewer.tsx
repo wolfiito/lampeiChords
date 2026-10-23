@@ -14,6 +14,8 @@ import {
   Edit3,
   Maximize,
   Minimize,
+  Maximize2,
+  Minimize2,
   Sliders,
   BookOpen,
   Play,
@@ -343,11 +345,34 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     isPlaying: boolean
     mode: 'manual' | 'sections' | 'duration'
     speed: number
+    targetDuration?: number
+    elapsedSeconds?: number
+    currentSectionTitle?: string
+    isPillMinimized?: boolean
   }>({
     isPlaying: false,
     mode: 'manual',
-    speed: 1.0
+    speed: 1.0,
+    isPillMinimized: true
   })
+
+  const [isScrollMinimized, setIsScrollMinimized] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('chords_scroll_pill_minimized')
+      if (saved !== null) return saved === 'true'
+      return true
+    } catch {
+      return true
+    }
+  })
+
+  const handleSetScrollMinimized = (minimized: boolean) => {
+    setIsScrollMinimized(minimized)
+    try {
+      localStorage.setItem('chords_scroll_pill_minimized', String(minimized))
+    } catch {}
+    window.dispatchEvent(new CustomEvent('chords:scroll:cmd-minimize', { detail: minimized }))
+  }
 
   const [isScrollMenuOpen, setIsScrollMenuOpen] = useState(false)
   const scrollMenuRef = useRef<HTMLDivElement>(null)
@@ -359,9 +384,16 @@ export const SongViewer: React.FC<SongViewerProps> = ({
         isPlaying: boolean
         mode: 'manual' | 'sections' | 'duration'
         speed: number
+        targetDuration?: number
+        elapsedSeconds?: number
+        currentSectionTitle?: string
+        isPillMinimized?: boolean
       }>
       if (custom.detail) {
         setScrollState(custom.detail)
+        if (typeof custom.detail.isPillMinimized === 'boolean') {
+          setIsScrollMinimized(custom.detail.isPillMinimized)
+        }
       }
     }
     window.addEventListener('chords:scroll:state', handleState)
@@ -1075,6 +1107,81 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 <span className="hidden sm:inline">Modo Escenario</span>
               </button>
             </div>
+
+            {/* In-Header AutoScroll Bar (when minimized to top bar) */}
+            {isScrollMinimized && (
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-zinc-800/90 p-1 rounded-xl border border-zinc-700/80 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleToggleScroll}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    scrollState.isPlaying
+                      ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-sm animate-pulse'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+                  }`}
+                  title={scrollState.isPlaying ? 'Pausar auto-scroll (Espacio)' : 'Iniciar auto-scroll (Espacio)'}
+                >
+                  {scrollState.isPlaying ? (
+                    <>
+                      <Pause className="w-3.5 h-3.5 fill-current" />
+                      <span className="hidden sm:inline">Pausar</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span className="hidden sm:inline">Scroll</span>
+                    </>
+                  )}
+                </button>
+
+                {scrollState.mode === 'manual' ? (
+                  <div className="flex items-center gap-1 px-1 text-xs font-bold font-mono text-emerald-400">
+                    <button
+                      onClick={() => handleSetScrollSpeed(Math.max(0.2, Math.round((scrollState.speed - 0.5) * 10) / 10))}
+                      className="w-4 h-4 flex items-center justify-center text-zinc-400 hover:text-white rounded hover:bg-zinc-700 transition"
+                      title="Reducir velocidad (-0.5x)"
+                    >
+                      -
+                    </button>
+                    <span>{scrollState.speed.toFixed(1)}x</span>
+                    <button
+                      onClick={() => handleSetScrollSpeed(Math.min(6, Math.round((scrollState.speed + 0.5) * 10) / 10))}
+                      className="w-4 h-4 flex items-center justify-center text-zinc-400 hover:text-white rounded hover:bg-zinc-700 transition"
+                      title="Aumentar velocidad (+0.5x)"
+                    >
+                      +
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-xs font-bold text-emerald-400 px-1 truncate max-w-[90px] sm:max-w-[130px]">
+                    {scrollState.currentSectionTitle || 'Sección'}
+                  </span>
+                )}
+
+                {/* Pop out to floating draggable window */}
+                <button
+                  type="button"
+                  onClick={() => handleSetScrollMinimized(false)}
+                  className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition cursor-pointer"
+                  title="Hacer ventana flotante (mover libremente en pantalla)"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* If floating, button to anchor back to header */}
+            {!isScrollMinimized && (
+              <button
+                type="button"
+                onClick={() => handleSetScrollMinimized(true)}
+                className="hidden lg:flex items-center gap-1 text-[11px] font-medium text-zinc-400 hover:text-white bg-zinc-800/60 hover:bg-zinc-800 px-2 py-1 rounded-xl border border-zinc-700/60 transition cursor-pointer shrink-0"
+                title="Anclar scroll a esta barra superior"
+              >
+                <Minimize2 className="w-3 h-3 text-emerald-400" />
+                <span>Anclar scroll</span>
+              </button>
+            )}
 
             {/* Center: Song Title on larger screens */}
             <div className="hidden lg:flex items-center justify-center flex-1 min-w-0 px-2 truncate">

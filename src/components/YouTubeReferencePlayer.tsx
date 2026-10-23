@@ -544,118 +544,120 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
     )
   }
 
-  // 2. Docked at Top View (ideal for Stage Mode or when pinned to top)
-  if (isDockedTop) {
-    return (
-      <div className="fixed top-13 sm:top-14 left-0 right-0 z-40 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 shadow-xl transition-all">
-        {/* Progress track */}
-        {duration > 0 && (
-          <div className="w-full h-1 bg-zinc-800 overflow-hidden">
-            <div
-              className="h-full bg-red-600 transition-all duration-300"
-              style={{ width: `${Math.min(100, (currentTime / duration) * 100)}%` }}
-            />
-          </div>
-        )}
-
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-2">
-          {/* Left info & status */}
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-6 h-6 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0">
-              <YouTubeIcon className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div className="min-w-0 flex items-center gap-2">
-              <span className="text-xs font-extrabold text-white truncate max-w-[140px] sm:max-w-xs">
-                {songTitle}
-              </span>
-              <span className="text-[11px] font-mono text-zinc-400 hidden sm:inline">
-                {formatDuration(currentTime)} / {formatDuration(duration)}
-              </span>
-              {isPlaying && (
-                <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Scroll sincronizado
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Right controls */}
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            {/* Play/Pause Button */}
-            <button
-              type="button"
-              onClick={togglePlayPause}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                isPlaying
-                  ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-md shadow-amber-500/20 animate-pulse'
-                  : 'bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-600/30'
-              }`}
-              title={isPlaying ? 'Pausar canción y scroll' : 'Reproducir canción y scroll'}
-            >
-              {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-              <span>{isPlaying ? 'Pausar' : 'Reproducir'}</span>
-            </button>
-
-            {/* Toggle Docked vs Floating */}
-            <button
-              type="button"
-              onClick={toggleDockTop}
-              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
-              title="Hacer ventana flotante"
-            >
-              <PinOff className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Toggle video expanded */}
-            <button
-              type="button"
-              onClick={toggleMinimized}
-              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
-              title={isMinimized ? 'Ver video' : 'Ocultar video'}
-            >
-              {isMinimized ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
-            </button>
-
-            {/* Close */}
-            <button
-              type="button"
-              onClick={handleClose}
-              className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition cursor-pointer"
-              title="Cerrar reproductor"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Video iframe container (collapsible, kept in DOM so audio never stops) */}
-        <div className={`transition-all duration-300 overflow-hidden ${isMinimized ? 'h-0 opacity-0 pointer-events-none' : 'max-w-md mx-auto aspect-video bg-black pb-2 px-3'}`}>
-          <div id={playerId} className="w-full h-full rounded-2xl overflow-hidden" />
-        </div>
-      </div>
-    )
-  }
-
-  // 3. Floating Draggable Player (moves anywhere on screen so it never covers anything!)
+  // Unified view: Always keeps the single persistent iframe container mounted in DOM
   return (
     <div
-      style={{
-        transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 50,
-        touchAction: 'none'
-      }}
-      className={`transition-shadow select-none ${isDragging ? 'shadow-2xl opacity-95 scale-[1.02]' : 'shadow-xl'}`}
+      style={
+        isDockedTop
+          ? {
+              position: 'fixed',
+              top: stageMode ? 0 : 54,
+              left: 0,
+              right: 0,
+              zIndex: 45
+            }
+          : {
+              transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              zIndex: 50,
+              touchAction: 'none'
+            }
+      }
+      className={
+        isDockedTop
+          ? 'bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 shadow-xl transition-all'
+          : `transition-shadow select-none ${isDragging ? 'shadow-2xl opacity-95 scale-[1.02]' : 'shadow-xl'}`
+      }
     >
       <div
-        className={`bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/80 shadow-2xl overflow-hidden flex flex-col transition-all ${
-          isMinimized ? 'w-72 sm:w-80 rounded-2xl' : 'w-[320px] sm:w-[380px] rounded-3xl'
-        }`}
+        className={
+          isDockedTop
+            ? 'w-full'
+            : `bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/80 shadow-2xl overflow-hidden flex flex-col transition-all ${
+                isMinimized ? 'w-72 sm:w-80 rounded-2xl' : 'w-[320px] sm:w-[380px] rounded-3xl'
+              }`
+        }
       >
-        {isMinimized ? (
+        {/* Child 1: Controls Header depending on mode */}
+        {isDockedTop ? (
+          <div>
+            {duration > 0 && (
+              <div className="w-full h-1 bg-zinc-800 overflow-hidden">
+                <div
+                  className="h-full bg-red-600 transition-all duration-300"
+                  style={{ width: `${Math.min(100, (currentTime / duration) * 100)}%` }}
+                />
+              </div>
+            )}
+
+            <div className="max-w-6xl mx-auto px-3 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-6 h-6 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0">
+                  <YouTubeIcon className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="min-w-0 flex items-center gap-2">
+                  <span className="text-xs font-extrabold text-white truncate max-w-[140px] sm:max-w-xs">
+                    {songTitle}
+                  </span>
+                  <span className="text-[11px] font-mono text-zinc-400 hidden sm:inline">
+                    {formatDuration(currentTime)} / {formatDuration(duration)}
+                  </span>
+                  {isPlaying && (
+                    <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Scroll sincronizado
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={togglePlayPause}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    isPlaying
+                      ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-md shadow-amber-500/20 animate-pulse'
+                      : 'bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-600/30'
+                  }`}
+                  title={isPlaying ? 'Pausar canción y scroll' : 'Reproducir canción y scroll'}
+                >
+                  {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                  <span>{isPlaying ? 'Pausar' : 'Reproducir'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleDockTop}
+                  className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                  title="Hacer ventana flotante"
+                >
+                  <PinOff className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleMinimized}
+                  className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                  title={isMinimized ? 'Ver video' : 'Ocultar video'}
+                >
+                  {isMinimized ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                  title="Cerrar reproductor"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : isMinimized ? (
           /* Minimized Floating Audio Bar Header */
           <div
             onPointerDown={handlePointerDown}
@@ -789,8 +791,17 @@ export const YouTubeReferencePlayer: React.FC<YouTubeReferencePlayerProps> = ({
         )}
 
         {/* Video iframe container (always kept mounted in DOM so audio never stops!) */}
-        <div className={`transition-all duration-300 overflow-hidden ${isMinimized ? 'h-0 opacity-0 pointer-events-none' : 'w-full aspect-video bg-black relative'}`}>
-          <div id={playerId} className="w-full h-full" />
+        <div
+          key="yt-iframe-persistent-holder"
+          className={`transition-all duration-300 overflow-hidden ${
+            isMinimized
+              ? 'h-0 opacity-0 pointer-events-none'
+              : isDockedTop
+              ? 'max-w-md mx-auto aspect-video bg-black pb-2 px-3'
+              : 'w-full aspect-video bg-black relative'
+          }`}
+        >
+          <div id={playerId} className="w-full h-full rounded-2xl overflow-hidden" />
         </div>
 
         {/* Bottom auto-sync info bar (only visible when expanded) */}

@@ -9,7 +9,8 @@ import {
   ChevronDown,
   ChevronUp,
   RotateCcw,
-  Minimize2
+  Minimize2,
+  GripHorizontal
 } from 'lucide-react'
 import type { Song } from '../types/song'
 import { calculateSongTiming, formatTime, type SongTimingData } from '../music/songTiming'
@@ -33,23 +34,101 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   const [mode, setMode] = useState<ScrollMode>('manual')
   const [isExpanded, setIsExpanded] = useState(false)
 
-  // Floating pill can be minimized/collapsed to a small button in normal mode
+  // Floating pill can be minimized (anchored to top header bar) or floating on screen
   const [isPillMinimized, setIsPillMinimized] = useState<boolean>(() => {
     try {
-      return localStorage.getItem('chords_scroll_pill_minimized') === 'true'
+      const saved = localStorage.getItem('chords_scroll_pill_minimized')
+      if (saved !== null) return saved === 'true'
+      return true // default to top bar
     } catch {
-      return false
+      return true
     }
   })
 
-  const togglePillMinimized = () => {
-    setIsPillMinimized(prev => {
-      const next = !prev
+  const setPillMinimized = (minimized: boolean) => {
+    setIsPillMinimized(minimized)
+    try {
+      localStorage.setItem('chords_scroll_pill_minimized', String(minimized))
+    } catch {}
+    window.dispatchEvent(
+      new CustomEvent('chords:scroll:state', {
+        detail: {
+          isPlaying: isPlayingRef.current,
+          mode,
+          speed,
+          targetDuration,
+          elapsedSeconds: elapsedRef.current,
+          currentSectionTitle: currentActiveSection?.title || 'Sección',
+          isPillMinimized: minimized
+        }
+      })
+    )
+  }
+
+  // Floating draggable position for AutoScrollControls
+  const [position, setPosition] = useState<{ x: number; y: number }>(() => {
+    try {
+      const saved = localStorage.getItem('chords_scroll_pos')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return parsed
+        }
+      }
+    } catch {}
+    const defaultX = typeof window !== 'undefined' ? Math.max(16, window.innerWidth - 390) : 20
+    const defaultY = typeof window !== 'undefined' ? Math.max(80, window.innerHeight - 90) : 500
+    return { x: defaultX, y: defaultY }
+  })
+
+  const [isDragging, setIsDragging] = useState<boolean>(false)
+  const dragStartRef = useRef<{ startX: number; startY: number; mouseX: number; mouseY: number }>({
+    startX: 0,
+    startY: 0,
+    mouseX: 0,
+    mouseY: 0
+  })
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button, a, input, select')) return
+    e.preventDefault()
+    setIsDragging(true)
+    dragStartRef.current = {
+      startX: position.x,
+      startY: position.y,
+      mouseX: e.clientX,
+      mouseY: e.clientY
+    }
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return
+    const dx = e.clientX - dragStartRef.current.mouseX
+    const dy = e.clientY - dragStartRef.current.mouseY
+
+    const pillWidth = 360
+    const pillHeight = isExpanded ? 340 : 64
+
+    const maxX = Math.max(0, window.innerWidth - pillWidth - 10)
+    const maxY = Math.max(0, window.innerHeight - pillHeight - 10)
+
+    const newX = Math.max(10, Math.min(maxX, dragStartRef.current.startX + dx))
+    const newY = Math.max(60, Math.min(maxY, dragStartRef.current.startY + dy))
+
+    setPosition({ x: newX, y: newY })
+  }
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (isDragging) {
+      setIsDragging(false)
       try {
-        localStorage.setItem('chords_scroll_pill_minimized', String(next))
+        localStorage.setItem('chords_scroll_pos', JSON.stringify(position))
       } catch {}
-      return next
-    })
+      try {
+        ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+      } catch {}
+    }
   }
 
   // 1. Manual mode state
@@ -185,27 +264,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     }
   }
 
-  // Broadcast scroll state to other components (e.g. SongViewer in Stage Mode)
-  useEffect(() => {
-    const broadcastState = () => {
-      window.dispatchEvent(
-        new CustomEvent('chords:scroll:state', {
-          detail: { isPlaying, mode, speed }
-        })
-      )
-    }
-
-    broadcastState()
-
-    const handleReqState = () => {
-      broadcastState()
-    }
-
-    window.addEventListener('chords:scroll:req-state', handleReqState)
-    return () => {
-      window.removeEventListener('chords:scroll:req-state', handleReqState)
-    }
-  }, [isPlaying, mode, speed])
+  // (Broadcast hook relocated below currentActiveSection to include active section title and duration)
 
   // Listen to remote commands from Stage Mode
   useEffect(() => {
@@ -307,12 +366,20 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
       }
     }
 
+    const handleRemoteMinimize = (e: Event) => {
+      const custom = e as CustomEvent<boolean>
+      if (typeof custom.detail === 'boolean') {
+        setPillMinimized(custom.detail)
+      }
+    }
+
     window.addEventListener('chords:scroll:cmd-toggle', handleRemoteToggle)
     window.addEventListener('chords:scroll:cmd-set-mode', handleRemoteSetMode)
     window.addEventListener('chords:scroll:cmd-set-speed', handleRemoteSetSpeed)
     window.addEventListener('chords:scroll:cmd-pause', handleRemotePause)
     window.addEventListener('chords:scroll:cmd-play', handleRemotePlay)
     window.addEventListener('chords:scroll:sync-time', handleSyncTime)
+    window.addEventListener('chords:scroll:cmd-minimize', handleRemoteMinimize)
 
     return () => {
       window.removeEventListener('chords:scroll:cmd-toggle', handleRemoteToggle)
@@ -321,6 +388,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
       window.removeEventListener('chords:scroll:cmd-pause', handleRemotePause)
       window.removeEventListener('chords:scroll:cmd-play', handleRemotePlay)
       window.removeEventListener('chords:scroll:sync-time', handleSyncTime)
+      window.removeEventListener('chords:scroll:cmd-minimize', handleRemoteMinimize)
     }
   }, [isPlaying, mode, targetDuration, timingData.sections])
 
@@ -645,27 +713,58 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     ? Math.min(100, Math.max(0, ((elapsedSeconds - currentActiveSection.startSec) / currentActiveSection.durationSec) * 100))
     : 0
 
+  // Broadcast comprehensive scroll state to SongViewer (for in-header bar & Stage Mode)
+  useEffect(() => {
+    const broadcastState = () => {
+      window.dispatchEvent(
+        new CustomEvent('chords:scroll:state', {
+          detail: {
+            isPlaying,
+            mode,
+            speed,
+            targetDuration,
+            elapsedSeconds,
+            currentSectionTitle: currentActiveSection?.title || 'Sección',
+            isPillMinimized
+          }
+        })
+      )
+    }
+
+    broadcastState()
+
+    const handleReqState = () => {
+      broadcastState()
+    }
+
+    window.addEventListener('chords:scroll:req-state', handleReqState)
+    return () => {
+      window.removeEventListener('chords:scroll:req-state', handleReqState)
+    }
+  }, [isPlaying, mode, speed, isPillMinimized, targetDuration, elapsedSeconds, currentActiveSection])
+
+  // When minimized, controls sit directly in the top header bar of SongViewer
+  if (isPillMinimized) {
+    return null
+  }
+
   return (
     <aside
       aria-label="Controles de Auto-Scroll Inteligente"
-      className="stage-auto-scroll-hide no-print fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 flex flex-col items-end gap-2 max-w-[96vw]"
+      style={{
+        transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 40,
+        touchAction: 'none'
+      }}
+      className={`stage-auto-scroll-hide no-print flex flex-col items-end gap-2 max-w-[96vw] select-none transition-shadow ${
+        isDragging ? 'shadow-2xl opacity-95 scale-[1.02]' : 'shadow-xl'
+      }`}
     >
-      {isPillMinimized ? (
-        <button
-          onClick={togglePillMinimized}
-          className="bg-zinc-900/90 hover:bg-zinc-800 backdrop-blur-md border border-zinc-700/80 hover:border-emerald-500/60 text-zinc-300 hover:text-white px-3 py-2 rounded-full shadow-2xl flex items-center gap-2 transition text-xs font-semibold group cursor-pointer"
-          title="Restaurar barra de auto-scroll"
-        >
-          <Sliders className="w-3.5 h-3.5 text-emerald-400 group-hover:rotate-45 transition-transform" />
-          <span>Auto-Scroll</span>
-          {isPlaying && (
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          )}
-        </button>
-      ) : (
-        <>
-          {/* Expanded Control Panel */}
-          {isExpanded && (
+      {/* Expanded Control Panel */}
+      {isExpanded && (
         <div className="bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 rounded-3xl p-3.5 sm:p-4 shadow-2xl w-80 sm:w-96 text-zinc-100 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* Header: Mode Selector Tabs */}
           <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
@@ -1004,7 +1103,17 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
       )}
 
       {/* Main Floating Action Pill */}
-      <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-800 rounded-2xl sm:rounded-3xl shadow-2xl p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-2.5 transition-all hover:border-emerald-500/50">
+      <div
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        className="bg-zinc-900/95 backdrop-blur-md border border-zinc-800 rounded-2xl sm:rounded-3xl shadow-2xl p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-2.5 transition-all hover:border-emerald-500/50 cursor-grab active:cursor-grabbing"
+      >
+        {/* Drag Grip Handle */}
+        <div className="p-1 text-zinc-500 hover:text-zinc-300 transition shrink-0" title="Arrastrar controles en pantalla">
+          <GripHorizontal className="w-4 h-4" />
+        </div>
+
         {/* Reset to Top Button */}
         <button
           onClick={handleResetToTop}
@@ -1104,17 +1213,15 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
           {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
         </button>
 
-        {/* Minimize Pill Button */}
+        {/* Minimize to Top Bar Button */}
         <button
-          onClick={togglePillMinimized}
-          title="Minimizar barra de auto-scroll"
+          onClick={() => setPillMinimized(true)}
+          title="Minimizar a barra superior"
           className="p-1.5 sm:p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition cursor-pointer"
         >
           <Minimize2 className="w-4 h-4" />
         </button>
       </div>
-        </>
-      )}
     </aside>
   )
 }
