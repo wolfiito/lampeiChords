@@ -181,7 +181,7 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className={`font-bold text-sm sm:text-base ${themeConfig.primaryText} hover:brightness-125 transition-colors truncate`}>
+                      <span className="font-bold text-sm sm:text-base text-white group-hover:text-zinc-200 transition-colors truncate">
                         {song.title}
                       </span>
                       <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${themeConfig.primaryBadge} shrink-0`}>
@@ -189,7 +189,9 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-zinc-500 truncate">
-                      <span>{song.artist || 'Artista'}</span>
+                      <span className={`font-medium ${themeConfig.primaryText}`}>
+                        {song.artist || 'Artista'}
+                      </span>
                       {song.tempo && <span>· {song.tempo} bpm</span>}
                       {song.capo > 0 && <span>· Capo {song.capo}</span>}
                     </div>

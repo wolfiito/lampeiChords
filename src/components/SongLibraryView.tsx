@@ -364,7 +364,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                       {/* Left: Info de la canción */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`font-bold text-sm sm:text-base ${themeConfig.primaryText} hover:brightness-125 transition-colors truncate`}>
+                          <span className="font-bold text-sm sm:text-base text-white group-hover:text-zinc-200 transition-colors truncate">
                             {song.title}
                           </span>
                           {song.capo > 0 && (
@@ -375,7 +375,9 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                         </div>
 
                         <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5 truncate">
-                          <span>{song.artist || 'Artista desconocido'}</span>
+                          <span className={`font-medium ${themeConfig.primaryText}`}>
+                            {song.artist || 'Artista desconocido'}
+                          </span>
                           {song.tags && song.tags.length > 0 && (
                             <span className="text-zinc-500 hidden sm:inline">
                               · {song.tags.slice(0, 2).map(t => `#${t}`).join(' ')}
@@ -479,7 +481,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                       {/* Left: Info del servicio */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`font-bold text-sm sm:text-base ${themeConfig.primaryText} hover:brightness-125 transition-colors truncate`}>
+                          <span className="font-bold text-sm sm:text-base text-white group-hover:text-zinc-200 transition-colors truncate">
                             {service.title}
                           </span>
                           <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full border ${typeInfo.bg} shrink-0`}>
@@ -488,7 +490,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                         </div>
 
                         <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5 truncate">
-                          <span className="font-medium text-zinc-300">
+                          <span className={`font-medium ${themeConfig.primaryText}`}>
                             {songCount} {songCount === 1 ? 'canción' : 'canciones'}
                           </span>
                           {service.date && <span>· {service.date}</span>}

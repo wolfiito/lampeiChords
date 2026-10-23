@@ -95,7 +95,7 @@ export const ServiceSongPickerModal: React.FC<ServiceSongPickerModalProps> = ({
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className={`font-bold text-sm ${themeConfig.primaryText} truncate`}>
+                      <span className="font-bold text-sm text-white truncate">
                         {song.title}
                       </span>
                       <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${themeConfig.primaryBadge}`}>
@@ -103,7 +103,10 @@ export const ServiceSongPickerModal: React.FC<ServiceSongPickerModalProps> = ({
                       </span>
                     </div>
                     <span className="text-[11px] text-zinc-400 truncate block">
-                      {song.artist || 'Artista'} · {song.tempo ? `${song.tempo} bpm` : 'Sin tempo'}
+                      <span className={`font-medium ${themeConfig.primaryText}`}>
+                        {song.artist || 'Artista'}
+                      </span>
+                      {song.tempo ? ` · ${song.tempo} bpm` : ''}
                     </span>
                   </div>
 
