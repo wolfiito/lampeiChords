@@ -215,38 +215,44 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
 
       {/* Main Container */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full flex-1">
-        {/* Navigation Tabs: Canciones vs Servicios */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 border-b border-zinc-800/80 pb-4">
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-zinc-900/90 p-1.5 rounded-2xl border border-zinc-800">
-            <button
-              onClick={() => {
-                setLibraryTab('songs')
-                setSelectedServiceDetailId(null)
-              }}
-              className={`px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-2 cursor-pointer ${
-                libraryTab === 'songs'
-                  ? `${themeConfig.primaryButton} shadow-md`
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Music className="w-4 h-4" />
-              <span>Canciones ({songs.length})</span>
-            </button>
+        {/* Navigation Tabs: Canciones vs Servicios (Sin caja desproporcionada ni línea divisoria) */}
+        <div className="flex items-center gap-6 sm:gap-8 mb-4">
+          <button
+            onClick={() => {
+              setLibraryTab('songs')
+              setSelectedServiceDetailId(null)
+            }}
+            className={`pb-2 text-sm sm:text-base font-bold transition-all flex items-center gap-2 cursor-pointer relative ${
+              libraryTab === 'songs'
+                ? `${themeConfig.primaryText}`
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Music className="w-4 h-4" />
+            <span>Canciones</span>
+            <span className="text-xs opacity-60 font-mono">({songs.length})</span>
+            {libraryTab === 'songs' && (
+              <span className={`absolute bottom-0 left-0 right-0 h-0.5 ${themeConfig.primaryBg} rounded-full`} />
+            )}
+          </button>
 
-            <button
-              onClick={() => {
-                setLibraryTab('services')
-              }}
-              className={`px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-2 cursor-pointer ${
-                libraryTab === 'services'
-                  ? `${themeConfig.primaryButton} shadow-md`
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              <span>Servicios ({services.length})</span>
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              setLibraryTab('services')
+            }}
+            className={`pb-2 text-sm sm:text-base font-bold transition-all flex items-center gap-2 cursor-pointer relative ${
+              libraryTab === 'services'
+                ? `${themeConfig.primaryText}`
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Servicios</span>
+            <span className="text-xs opacity-60 font-mono">({services.length})</span>
+            {libraryTab === 'services' && (
+              <span className={`absolute bottom-0 left-0 right-0 h-0.5 ${themeConfig.primaryBg} rounded-full`} />
+            )}
+          </button>
         </div>
 
         {/* Search & Filter Bar (Sin caja) */}
