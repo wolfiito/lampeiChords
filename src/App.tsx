@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { useSongs } from './hooks/useSongs'
+import { useServices } from './hooks/useServices'
 import { Navbar } from './components/Navbar'
 import { SongViewer } from './components/SongViewer'
 import { SongEditor } from './components/SongEditor'
@@ -22,6 +23,18 @@ export function App() {
     exportLibrary
   } = useSongs()
 
+  const {
+    services,
+    activeService,
+    setActiveServiceId,
+    saveService,
+    deleteService,
+    duplicateService,
+    addSongToService,
+    removeSongFromService,
+    reorderSongsInService
+  } = useServices()
+
   // App starts on the Repertoire catalog ('library') instead of jumping straight into a song!
   const [viewMode, setViewMode] = useState<'library' | 'viewer' | 'editor'>('library')
   const [draftSong, setDraftSong] = useState<Song | null>(null)
@@ -29,6 +42,7 @@ export function App() {
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [isPrintRequested, setIsPrintRequested] = useState(false)
   const [activeSectionIndex, setActiveSectionIndex] = useState<number>(-1)
+  const [serviceSongIndex, setServiceSongIndex] = useState<number>(0)
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -52,6 +66,52 @@ export function App() {
     setViewMode('editor')
   }
 
+  // Handle playing inside a Service
+  const handleStartServiceSong = (serviceId: string, startIndex: number) => {
+    setActiveServiceId(serviceId)
+    setServiceSongIndex(startIndex)
+    const targetService = services.find(s => s.id === serviceId)
+    const targetSongId = targetService?.songIds[startIndex]
+    if (targetSongId) {
+      setDraftSong(null)
+      setActiveSongId(targetSongId)
+      setViewMode('viewer')
+    }
+  }
+
+  // Navigate between songs within active service
+  const handleNavigateServiceSong = (direction: 'prev' | 'next') => {
+    if (!activeService) return
+    const nextIndex = direction === 'next' ? serviceSongIndex + 1 : serviceSongIndex - 1
+    if (nextIndex >= 0 && nextIndex < activeService.songIds.length) {
+      setServiceSongIndex(nextIndex)
+      const nextSongId = activeService.songIds[nextIndex]
+      if (nextSongId) {
+        setActiveSongId(nextSongId)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    }
+  }
+
+  const handleJumpToServiceSongIndex = (index: number) => {
+    if (!activeService) return
+    if (index >= 0 && index < activeService.songIds.length) {
+      setServiceSongIndex(index)
+      const targetSongId = activeService.songIds[index]
+      if (targetSongId) {
+        setActiveSongId(targetSongId)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    }
+  }
+
+  // Ordered Song objects for the active service
+  const activeServiceSongs = activeService
+    ? activeService.songIds
+        .map(id => songs.find(s => s.id === id))
+        .filter((s): s is Song => Boolean(s))
+    : []
+
   // Current song being edited: if it's a new song draft, use draftSong; otherwise activeSong
   const songToEdit = draftSong || activeSong
 
@@ -61,8 +121,10 @@ export function App() {
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
         <SongLibraryView
           songs={songs}
+          services={services}
           onSelectSong={id => {
             setDraftSong(null)
+            setActiveServiceId(null) // Disassociate from any service when choosing a standalone song
             setActiveSongId(id)
             setViewMode('viewer')
           }}
@@ -76,6 +138,13 @@ export function App() {
           onDeleteSong={deleteSong}
           onOpenImportModal={() => setIsImportOpen(true)}
           onExportLibrary={exportLibrary}
+          onStartServiceSong={handleStartServiceSong}
+          onSaveService={saveService}
+          onDeleteService={deleteService}
+          onDuplicateService={duplicateService}
+          onAddSongToService={addSongToService}
+          onRemoveSongFromService={removeSongFromService}
+          onReorderSongsInService={reorderSongsInService}
         />
 
         {/* Smart Import Modal */}
@@ -161,6 +230,11 @@ export function App() {
             }}
             onOpenLibrary={() => setIsLibraryOpen(true)}
             activeSectionIndex={activeSectionIndex}
+            activeService={activeService}
+            serviceSongs={activeServiceSongs}
+            currentServiceSongIndex={serviceSongIndex}
+            onNavigateServiceSong={handleNavigateServiceSong}
+            onJumpToServiceSongIndex={handleJumpToServiceSongIndex}
           />
         ) : null}
       </main>
