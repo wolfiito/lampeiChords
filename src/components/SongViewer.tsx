@@ -446,6 +446,11 @@ export const SongViewer: React.FC<SongViewerProps> = ({
     window.dispatchEvent(new CustomEvent('chords:scroll:cmd-toggle'))
   }
 
+  const handleResetScroll = () => {
+    window.dispatchEvent(new CustomEvent('chords:scroll:cmd-reset'))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const handleSetScrollMode = (newMode: 'manual' | 'sections') => {
     window.dispatchEvent(new CustomEvent('chords:scroll:cmd-set-mode', { detail: newMode }))
   }
@@ -936,6 +941,16 @@ export const SongViewer: React.FC<SongViewerProps> = ({
               {/* Controles de Auto-Scroll en Escenario */}
               <div className="relative" ref={scrollMenuRef}>
                 <div className="flex items-center bg-zinc-900/90 p-0.5 rounded-xl border border-zinc-800 shadow-sm">
+                  {/* Botón Rebobinar al inicio */}
+                  <button
+                    type="button"
+                    onClick={handleResetScroll}
+                    title="Volver al inicio (Rebobinar)"
+                    className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer active:scale-95"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+
                   {/* Botón Principal: Play / Pause */}
                   <button
                     onClick={handleToggleScroll}
@@ -1131,6 +1146,16 @@ export const SongViewer: React.FC<SongViewerProps> = ({
             {/* In-Header AutoScroll Bar (when minimized to top bar) */}
             {isScrollMinimized && (
               <div className="flex items-center gap-1 sm:gap-1.5 bg-zinc-800/90 p-1 rounded-xl border border-zinc-700/80 shrink-0">
+                {/* Botón Rebobinar al inicio */}
+                <button
+                  type="button"
+                  onClick={handleResetScroll}
+                  className="p-1 sm:p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-750 rounded-lg transition cursor-pointer active:scale-95"
+                  title="Volver al inicio (Rebobinar)"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+
                 <button
                   type="button"
                   onClick={handleToggleScroll}

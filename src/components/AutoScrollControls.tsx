@@ -166,6 +166,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
   isPlayingRef.current = isPlaying
   const lastYtSyncRef = useRef<number>(0)
   const lastUserScrollTimeRef = useRef<number>(0)
+  const handleResetToTopRef = useRef<() => void>(() => {})
 
   // Get maximum scrollable height
   const getMaxScroll = (): number => {
@@ -373,6 +374,10 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
       }
     }
 
+    const handleRemoteReset = () => {
+      handleResetToTopRef.current()
+    }
+
     window.addEventListener('chords:scroll:cmd-toggle', handleRemoteToggle)
     window.addEventListener('chords:scroll:cmd-set-mode', handleRemoteSetMode)
     window.addEventListener('chords:scroll:cmd-set-speed', handleRemoteSetSpeed)
@@ -380,6 +385,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     window.addEventListener('chords:scroll:cmd-play', handleRemotePlay)
     window.addEventListener('chords:scroll:sync-time', handleSyncTime)
     window.addEventListener('chords:scroll:cmd-minimize', handleRemoteMinimize)
+    window.addEventListener('chords:scroll:cmd-reset', handleRemoteReset)
 
     return () => {
       window.removeEventListener('chords:scroll:cmd-toggle', handleRemoteToggle)
@@ -389,6 +395,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
       window.removeEventListener('chords:scroll:cmd-play', handleRemotePlay)
       window.removeEventListener('chords:scroll:sync-time', handleSyncTime)
       window.removeEventListener('chords:scroll:cmd-minimize', handleRemoteMinimize)
+      window.removeEventListener('chords:scroll:cmd-reset', handleRemoteReset)
     }
   }, [isPlaying, mode, targetDuration, timingData.sections])
 
@@ -458,6 +465,7 @@ export const AutoScrollControls: React.FC<AutoScrollControlsProps> = ({
     setElapsedSeconds(0)
     onActiveSectionChange?.(-1)
   }
+  handleResetToTopRef.current = handleResetToTop
 
   // Jump to specific section (jumps to target chorus if repeating)
   const handleJumpToSection = (secIndex: number) => {
