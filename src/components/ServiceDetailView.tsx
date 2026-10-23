@@ -166,12 +166,11 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
               )
             }
 
-            const displayKey = song.currentKey || song.originalKey || 'C'
-
             return (
               <div
                 key={`${song.id}-${index}`}
-                className="py-2.5 px-2 sm:px-3 flex items-center justify-between gap-2.5 sm:gap-4 hover:bg-zinc-900/50 transition group"
+                onClick={() => onStartService(index)}
+                className="py-2.5 px-2 sm:px-3 flex items-center justify-between gap-2.5 sm:gap-4 hover:bg-zinc-900/50 transition group cursor-pointer"
               >
                 {/* Number & Song Info */}
                 <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
@@ -184,9 +183,6 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
                       <span className="font-bold text-sm sm:text-base text-white group-hover:text-zinc-200 transition-colors truncate">
                         {song.title}
                       </span>
-                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${themeConfig.primaryBadge} shrink-0`}>
-                        {displayKey}
-                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-zinc-500 truncate">
                       <span className={`font-medium ${themeConfig.primaryText}`}>
@@ -198,8 +194,8 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
                   </div>
                 </div>
 
-                {/* Actions: Reorder, Play this, Remove */}
-                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                {/* Actions: Reorder, Remove */}
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0" onClick={e => e.stopPropagation()}>
                   {/* Reorder Buttons */}
                   <div className="flex items-center">
                     <button
@@ -221,17 +217,6 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
                       <ChevronDown className="w-4 h-4" />
                     </button>
                   </div>
-
-                  {/* Play from this song button */}
-                  <button
-                    type="button"
-                    onClick={() => onStartService(index)}
-                    className="p-1.5 sm:px-2.5 sm:py-1 bg-zinc-850 hover:bg-emerald-600 text-zinc-300 hover:text-white rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer active:scale-95"
-                    title="Tocar desde esta canción"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span className="hidden sm:inline">Tocar</span>
-                  </button>
 
                   {/* Remove button */}
                   <button
