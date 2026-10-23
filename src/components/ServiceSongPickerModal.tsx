@@ -63,15 +63,15 @@ export const ServiceSongPickerModal: React.FC<ServiceSongPickerModalProps> = ({
         </div>
 
         {/* Search */}
-        <div className="py-3 shrink-0">
+        <div className="py-2.5 shrink-0 border-b border-zinc-800/80 focus-within:border-emerald-500 transition-colors">
           <div className="relative">
-            <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-zinc-500 absolute left-1 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Buscar canción por título, tono o artista..."
+              placeholder="Buscar por título, tono o artista..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-700/80 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition"
+              className="w-full bg-transparent pl-8 pr-4 py-1.5 text-sm text-white placeholder-zinc-500 focus:outline-none transition"
               autoFocus
             />
           </div>

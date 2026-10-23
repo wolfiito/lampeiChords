@@ -256,11 +256,11 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
           </div>
         </div>
 
-        {/* Search & Filter Bar */}
-        <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3 sm:p-4 mb-6 sm:mb-8 space-y-3 shadow-lg">
-          {/* Search Box */}
-          <div className="relative">
-            <Search className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        {/* Search & Filter Bar (Sin caja) */}
+        <div className="mb-6 space-y-3">
+          {/* Search Box - Flat, clean and minimal */}
+          <div className="relative border-b border-zinc-800/80 focus-within:border-emerald-500 transition-colors pb-1">
+            <Search className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 absolute left-1 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder={
@@ -270,12 +270,12 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
               }
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-zinc-950/80 text-sm sm:text-base text-zinc-100 placeholder-zinc-500 pl-10 sm:pl-11 pr-4 py-2.5 rounded-xl border border-zinc-700/80 focus:outline-none focus:border-zinc-500 transition"
+              className="w-full bg-transparent text-sm sm:text-base text-zinc-100 placeholder-zinc-500 pl-8 sm:pl-9 pr-16 py-2 focus:outline-none transition"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="text-xs text-zinc-400 hover:text-white absolute right-3.5 top-1/2 -translate-y-1/2 bg-zinc-800 px-2 py-0.5 rounded-lg"
+                className="text-xs text-zinc-400 hover:text-white absolute right-1 top-1/2 -translate-y-1/2 bg-zinc-800 hover:bg-zinc-700 px-2 py-0.5 rounded-lg cursor-pointer transition"
               >
                 Limpiar
               </button>
@@ -284,16 +284,16 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
 
           {/* Tags Filter Chips (only for Songs tab) */}
           {libraryTab === 'songs' && allTags.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1">
-              <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1 mr-1 shrink-0">
-                <Tag className={`w-3.5 h-3.5 ${themeConfig.primaryText}`} /> Filtros:
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-0.5">
+              <span className="text-xs font-semibold text-zinc-500 flex items-center gap-1 mr-1 shrink-0">
+                <Tag className={`w-3.5 h-3.5 ${themeConfig.primaryText}`} />
               </span>
               <button
                 onClick={() => setSelectedTag(null)}
                 className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
                   selectedTag === null
                     ? `${themeConfig.primaryButton} shadow-sm`
-                    : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                    : 'bg-zinc-900/60 text-zinc-400 hover:text-white hover:bg-zinc-800'
                 }`}
               >
                 Todas ({songs.length})
@@ -308,7 +308,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                     className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
                       isSelected
                         ? `${themeConfig.primaryButton} shadow-sm`
-                        : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                        : 'bg-zinc-900/60 text-zinc-400 hover:text-white hover:bg-zinc-800'
                     }`}
                   >
                     #{tag} ({count})
