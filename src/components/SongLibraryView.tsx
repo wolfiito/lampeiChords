@@ -360,8 +360,6 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
             ) : (
               <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/60">
                 {filteredSongs.map(song => {
-                  const displayKey = song.currentKey || song.originalKey || 'C'
-
                   return (
                     <div
                       key={song.id}
@@ -373,9 +371,6 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-sm sm:text-base text-zinc-100 group-hover:text-emerald-400 transition-colors truncate">
                             {song.title}
-                          </span>
-                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${themeConfig.primaryBadge} shrink-0`}>
-                            {displayKey}
                           </span>
                           {song.capo > 0 && (
                             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 shrink-0">
@@ -391,7 +386,6 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
 
                         <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5 truncate">
                           <span>{song.artist || 'Artista desconocido'}</span>
-                          {song.tempo && <span>· {song.tempo} bpm</span>}
                           {song.tags && song.tags.length > 0 && (
                             <span className="text-zinc-500 hidden sm:inline">
                               · {song.tags.slice(0, 2).map(t => `#${t}`).join(' ')}

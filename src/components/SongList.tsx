@@ -167,21 +167,13 @@ export const SongList: React.FC<SongListProps> = ({
                     </h3>
                     <p className="text-xs text-zinc-400 truncate mt-0.5">{song.artist}</p>
 
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-700 text-emerald-400">
-                        {song.currentKey || song.originalKey}
-                      </span>
-                      {song.capo > 0 && (
+                    {song.capo > 0 && (
+                      <div className="flex items-center gap-2 mt-1.5">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300">
                           Capo {song.capo}
                         </span>
-                      )}
-                      {song.tempo && (
-                        <span className="text-[10px] font-medium text-zinc-400">
-                          {song.tempo} bpm
-                        </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions: Duplicate & Delete */}
