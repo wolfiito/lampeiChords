@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { X, Calendar, MapPin, Tag } from 'lucide-react'
-import type { ServiceItem, ServiceType } from '../types/service'
+import type { ServiceItem, ServiceType, ServiceCategory } from '../types/service'
+import { CATEGORY_LABELS, getServiceCategory } from '../types/service'
 import { useTheme } from '../context/ThemeContext'
 
 interface ServiceModalProps {
@@ -8,13 +9,15 @@ interface ServiceModalProps {
   onClose: () => void
   onSave: (service: ServiceItem) => void
   initialService?: ServiceItem | null
+  category?: ServiceCategory // Categoría para nuevas listas
 }
 
 export const ServiceModal: React.FC<ServiceModalProps> = ({
   isOpen,
   onClose,
   onSave,
-  initialService
+  initialService,
+  category = 'culto'
 }) => {
   const { themeConfig } = useTheme()
 
@@ -42,6 +45,9 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
 
   if (!isOpen) return null
 
+  const effectiveCategory: ServiceCategory = initialService ? getServiceCategory(initialService) : category
+  const label = CATEGORY_LABELS[effectiveCategory]
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
@@ -52,6 +58,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
       date: date || undefined,
       location: location.trim() || undefined,
       type,
+      category: effectiveCategory,
       notes: notes.trim() || undefined,
       songIds: initialService?.songIds || [],
       createdAt: initialService?.createdAt || Date.now(),
@@ -75,10 +82,10 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
           <div>
             <h3 className="text-lg font-black text-white">
-              {initialService ? 'Editar Servicio' : 'Nuevo Servicio'}
+              {initialService ? `Editar ${label.singular}` : `${label.articleNew} ${label.singular}`}
             </h3>
             <p className="text-xs text-zinc-400">
-              {initialService ? 'Modifica los datos del servicio' : 'Crea una lista ordenada de canciones para tu evento'}
+              {initialService ? `Modifica los datos ${label.article === 'el' ? 'del' : 'de la'} ${label.singular.toLowerCase()}` : 'Crea una lista ordenada de canciones para tu evento'}
             </p>
           </div>
           <button
@@ -106,7 +113,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                     : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'
                 }`}
               >
-                ⛪ Servicio
+                ⛪ Culto
               </button>
               <button
                 type="button"
@@ -136,12 +143,12 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
           {/* Título */}
           <div>
             <label className="text-xs font-bold text-zinc-300 block mb-1">
-              Nombre del Servicio o Ensayo *
+              {`Nombre ${label.article === 'el' ? 'del' : 'de la'} ${label.singular} o Ensayo *`}
             </label>
             <input
               type="text"
               required
-              placeholder="Ej. Domingo 27 Oct - Servicio General"
+              placeholder={effectiveCategory === 'oracion' ? 'Ej. Martes 29 Oct - Oración' : 'Ej. Domingo 27 Oct - Culto General'}
               value={title}
               onChange={e => setTitle(e.target.value)}
               className="w-full bg-zinc-950 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition"
@@ -207,7 +214,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
               disabled={!title.trim()}
               className={`px-5 py-2 ${themeConfig.primaryButton} disabled:opacity-50 text-xs font-bold rounded-xl transition shadow-md cursor-pointer`}
             >
-              {initialService ? 'Guardar Cambios' : 'Crear Servicio'}
+              {initialService ? 'Guardar Cambios' : `Crear ${label.singular}`}
             </button>
           </div>
         </form>

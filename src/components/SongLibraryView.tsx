@@ -12,7 +12,8 @@ import {
   Calendar
 } from 'lucide-react'
 import type { Song } from '../types/song'
-import type { ServiceItem } from '../types/service'
+import type { ServiceItem, ServiceCategory } from '../types/service'
+import { CATEGORY_LABELS, getServiceCategory } from '../types/service'
 import { useTheme } from '../context/ThemeContext'
 import { ThemeDropdown } from './ThemeDropdown'
 import { ServiceDetailView } from './ServiceDetailView'
@@ -56,7 +57,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
   onReorderSongsInService
 }) => {
   const { themeConfig } = useTheme()
-  const [libraryTab, setLibraryTab] = useState<'songs' | 'services'>('songs')
+  const [libraryTab, setLibraryTab] = useState<'songs' | ServiceCategory>('songs')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
 
@@ -84,16 +85,30 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
     })
   }, [songs, searchTerm, selectedTag])
 
+  // Categoría activa (Culto / Oración) cuando no estamos en Canciones
+  const activeCategory: ServiceCategory = libraryTab === 'songs' ? 'culto' : libraryTab
+  const catLabel = CATEGORY_LABELS[activeCategory]
+  const catLower = catLabel.singular.toLowerCase()
+  const catPluralLower = catLabel.plural.toLowerCase()
+  const isMasc = catLabel.article === 'el'
+
+  const countByCategory = useMemo(() => {
+    const counts: Record<ServiceCategory, number> = { culto: 0, oracion: 0 }
+    services.forEach(s => { counts[getServiceCategory(s)]++ })
+    return counts
+  }, [services])
+
   const filteredServices = useMemo(() => {
     const term = searchTerm.toLowerCase()
     return services.filter(s => {
+      if (getServiceCategory(s) !== activeCategory) return false
       return (
         s.title.toLowerCase().includes(term) ||
         (s.location && s.location.toLowerCase().includes(term)) ||
         (s.date && s.date.includes(term))
       )
     })
-  }, [services, searchTerm])
+  }, [services, searchTerm, activeCategory])
 
   const getServiceTypeBadge = (type?: string) => {
     switch (type) {
@@ -102,7 +117,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
       case 'evento':
         return { label: '✨ Especial', bg: 'bg-purple-500/10 border-purple-500/30 text-purple-400' }
       default:
-        return { label: '⛪ Servicio', bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' }
+        return { label: '⛪ Culto', bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' }
     }
   }
 
@@ -151,6 +166,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
             onClose={() => setIsServiceModalOpen(false)}
             onSave={s => onSaveService?.(s)}
             initialService={editingService}
+            category={getServiceCategory(currentService)}
           />
         </div>
       )
@@ -198,11 +214,11 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                   setIsServiceModalOpen(true)
                 }}
                 className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 ${themeConfig.primaryButton} text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1 sm:gap-1.5 cursor-pointer active:scale-95 shrink-0`}
-                title="Crear un nuevo servicio"
+                title={`Crear ${isMasc ? 'un nuevo' : 'una nueva'} ${catLower}`}
               >
                 <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Nuevo Servicio</span>
-                <span className="sm:hidden">Nuevo</span>
+                <span className="hidden sm:inline">{catLabel.articleNew} {catLabel.singular}</span>
+                <span className="sm:hidden">{catLabel.articleNew}</span>
               </button>
             )}
           </div>
@@ -211,7 +227,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
 
       {/* Main Container */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full flex-1">
-        {/* Navigation Tabs: Canciones vs Servicios (Sin caja desproporcionada ni línea divisoria) */}
+        {/* Navigation Tabs: Canciones vs Culto vs Oración (Sin caja desproporcionada ni línea divisoria) */}
         <div className="flex items-center gap-6 sm:gap-8 mb-4">
           <button
             onClick={() => {
@@ -232,23 +248,26 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
             )}
           </button>
 
-          <button
-            onClick={() => {
-              setLibraryTab('services')
-            }}
-            className={`pb-2 text-sm sm:text-base font-bold transition-all flex items-center gap-2 cursor-pointer relative ${
-              libraryTab === 'services'
-                ? `${themeConfig.primaryText}`
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Servicios</span>
-            <span className="text-xs opacity-60 font-mono">({services.length})</span>
-            {libraryTab === 'services' && (
-              <span className={`absolute bottom-0 left-0 right-0 h-0.5 ${themeConfig.primaryBg} rounded-full`} />
-            )}
-          </button>
+          {(['culto', 'oracion'] as ServiceCategory[]).map(cat => (
+            <button
+              key={cat}
+              onClick={() => {
+                setLibraryTab(cat)
+              }}
+              className={`pb-2 text-sm sm:text-base font-bold transition-all flex items-center gap-2 cursor-pointer relative ${
+                libraryTab === cat
+                  ? `${themeConfig.primaryText}`
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              <span>{CATEGORY_LABELS[cat].singular}</span>
+              <span className="text-xs opacity-60 font-mono">({countByCategory[cat]})</span>
+              {libraryTab === cat && (
+                <span className={`absolute bottom-0 left-0 right-0 h-0.5 ${themeConfig.primaryBg} rounded-full`} />
+              )}
+            </button>
+          ))}
         </div>
 
         {/* Search & Filter Bar (Sin caja) */}
@@ -261,7 +280,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
               placeholder={
                 libraryTab === 'songs'
                   ? 'Buscar por título, artista o tono (ej. G, C, Alabanza)...'
-                  : 'Buscar servicio por nombre, fecha o iglesia...'
+                  : `Buscar ${catLower} por nombre, fecha o iglesia...`
               }
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -438,9 +457,9 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
         )}
 
         {/* ============================================================== */}
-        {/* TAB 2: SERVICIOS Y ENSAYOS                                     */}
+        {/* TAB 2/3: CULTO / ORACIÓN                                       */}
         {/* ============================================================== */}
-        {libraryTab === 'services' && (
+        {libraryTab !== 'songs' && (
           <>
             {filteredServices.length === 0 ? (
               <div className="bg-zinc-900/40 border border-dashed border-zinc-800 rounded-3xl p-8 sm:p-12 text-center max-w-lg mx-auto">
@@ -448,12 +467,12 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                   <Calendar className="w-7 h-7" />
                 </div>
                 <h3 className="text-lg font-bold text-white mb-1">
-                  {searchTerm ? 'No se encontraron servicios' : 'Aún no tienes servicios creados'}
+                  {searchTerm ? `No se encontraron ${catPluralLower}` : `Aún no tienes ${catPluralLower} ${isMasc ? 'creados' : 'creadas'}`}
                 </h3>
                 <p className="text-xs sm:text-sm text-zinc-400 mb-6">
                   {searchTerm
                     ? 'Prueba buscando con otro nombre o fecha.'
-                    : 'Crea un servicio para ordenar las canciones de tu próximo domingo o ensayo y pasar entre ellas con un toque.'}
+                    : `Crea ${isMasc ? 'un' : 'una'} ${catLower} para ordenar las canciones y pasar entre ellas con un toque.`}
                 </p>
                 <button
                   onClick={() => {
@@ -463,7 +482,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                   className={`px-4 py-2.5 ${themeConfig.primaryButton} rounded-xl text-sm font-bold shadow-lg transition flex items-center gap-2 mx-auto cursor-pointer`}
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Crear Primer Servicio</span>
+                  <span>Crear {isMasc ? 'Primer' : 'Primera'} {catLabel.singular}</span>
                 </button>
               </div>
             ) : (
@@ -511,7 +530,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                             }
                           }}
                           className={`p-1.5 sm:px-3 sm:py-1 ${themeConfig.primaryButton} rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs`}
-                          title={songCount > 0 ? 'Tocar servicio desde el inicio' : 'Ver canciones'}
+                          title={songCount > 0 ? `Tocar ${catLower} desde el inicio` : 'Ver canciones'}
                         >
                           <Play className="w-3.5 h-3.5 fill-current" />
                           <span className="hidden sm:inline">{songCount > 0 ? 'Tocar' : 'Ver'}</span>
@@ -523,7 +542,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                             setEditingService(service)
                             setIsServiceModalOpen(true)
                           }}
-                          title="Editar datos del servicio"
+                          title={`Editar datos ${isMasc ? 'del' : 'de la'} ${catLower}`}
                           className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -532,7 +551,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onDuplicateService?.(service.id)}
-                          title="Duplicar servicio"
+                          title={`Duplicar ${catLower}`}
                           className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
                         >
                           <Copy className="w-3.5 h-3.5" />
@@ -541,11 +560,11 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            if (confirm(`¿Eliminar el servicio "${service.title}"?`)) {
+                            if (confirm(`¿Eliminar ${catLabel.article} ${catLower} "${service.title}"?`)) {
                               onDeleteService?.(service.id)
                             }
                           }}
-                          title="Eliminar servicio"
+                          title={`Eliminar ${catLower}`}
                           className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -563,7 +582,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
         <div className="mt-12 pt-6 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
           <div className="flex items-center gap-2">
             <Music className="w-4 h-4 text-emerald-500" />
-            <span>chordsLampei · Repertorio y Servicios en la nube</span>
+            <span>chordsLampei · Repertorio, Cultos y Oraciones en la nube</span>
           </div>
 
           <button
@@ -583,6 +602,7 @@ export const SongLibraryView: React.FC<SongLibraryViewProps> = ({
         onClose={() => setIsServiceModalOpen(false)}
         onSave={s => onSaveService?.(s)}
         initialService={editingService}
+        category={activeCategory}
       />
     </div>
   )

@@ -41,6 +41,7 @@ import { PrintModal } from './PrintModal'
 import { generateDirectSongPdf } from '../utils/pdfGenerator'
 import { YouTubeReferencePlayer } from './YouTubeReferencePlayer'
 import type { ServiceItem } from '../types/service'
+import { CATEGORY_LABELS, getServiceCategory } from '../types/service'
 
 export interface SongViewerProps {
   song: Song
@@ -1393,7 +1394,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 window.scrollTo({ top: 0, behavior: 'smooth' })
               }}
               className="flex flex-col items-center justify-center min-w-[54px] py-1 px-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-600 border border-zinc-800/70 transition cursor-pointer active:scale-95 group"
-              title="Canción anterior en el servicio"
+              title="Canción anterior en la lista"
             >
               <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
               <span className="text-[10px] font-black tracking-wider uppercase">ant</span>
@@ -1434,7 +1435,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                 window.scrollTo({ top: 0, behavior: 'smooth' })
               }}
               className="flex flex-col items-center justify-center min-w-[54px] py-1 px-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-600 border border-zinc-800/70 transition cursor-pointer active:scale-95 group"
-              title="Siguiente canción en el servicio"
+              title="Siguiente canción en la lista"
             >
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               <span className="text-[10px] font-black tracking-wider uppercase">sig</span>
@@ -1481,7 +1482,7 @@ export const SongViewer: React.FC<SongViewerProps> = ({
                   <div className="flex items-center justify-between">
                     <label className={`text-xs font-bold ${colorConfig.primaryText} uppercase tracking-wider flex items-center gap-1.5`}>
                       <BookOpen className="w-3.5 h-3.5" />
-                      <span className="truncate max-w-[190px]">Servicio: {activeService.title}</span>
+                      <span className="truncate max-w-[190px]">{CATEGORY_LABELS[getServiceCategory(activeService)].singular}: {activeService.title}</span>
                     </label>
                     <span className="text-[11px] font-mono font-bold text-emerald-400 shrink-0">
                       {(currentServiceSongIndex || 0) + 1} de {serviceSongs.length}

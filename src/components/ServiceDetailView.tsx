@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import type { Song } from '../types/song'
 import type { ServiceItem } from '../types/service'
+import { CATEGORY_LABELS, getServiceCategory } from '../types/service'
 import { useTheme } from '../context/ThemeContext'
 import { ServiceSongPickerModal } from './ServiceSongPickerModal'
 
@@ -37,6 +38,8 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
 }) => {
   const { themeConfig } = useTheme()
   const [isPickerOpen, setIsPickerOpen] = useState(false)
+  const label = CATEGORY_LABELS[getServiceCategory(service)]
+  const deLa = label.article === 'el' ? 'del' : 'de la'
 
   // Map service songIds to actual Song objects
   const songMap = new Map(songs.map(s => [s.id, s]))
@@ -71,7 +74,7 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
           <button
             onClick={onBack}
             className="p-2 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-zinc-800 transition cursor-pointer shrink-0"
-            title="Volver a Servicios"
+            title={`Volver a ${label.plural}`}
           >
             <ArrowLeft className="w-4 h-4 text-emerald-400" />
           </button>
@@ -92,7 +95,7 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
             <button
               onClick={() => onStartService(0)}
               className={`py-2 px-3.5 ${themeConfig.primaryButton} rounded-xl text-xs font-black shadow transition flex items-center gap-1.5 cursor-pointer active:scale-95`}
-              title="Iniciar servicio desde la primera canción"
+              title={`Iniciar ${label.singular.toLowerCase()} desde la primera canción`}
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>Iniciar</span>
@@ -102,7 +105,7 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
           <button
             onClick={() => onEditService(service)}
             className="p-2 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-zinc-800 transition cursor-pointer"
-            title="Editar servicio"
+            title={`Editar ${label.singular.toLowerCase()}`}
           >
             <Edit3 className="w-4 h-4" />
           </button>
@@ -133,7 +136,7 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
         <div className="py-12 border border-dashed border-zinc-800/80 rounded-2xl p-6 text-center text-zinc-500">
           <Music className="w-8 h-8 text-zinc-600 mx-auto mb-2 opacity-40" />
           <h3 className="text-sm font-bold text-white mb-1">
-            Este servicio aún no tiene canciones
+            {`${label.article === 'el' ? 'Este' : 'Esta'} ${label.singular.toLowerCase()} aún no tiene canciones`}
           </h3>
           <p className="text-xs text-zinc-400 mb-4">
             Toca el botón + para agregar canciones de tu repertorio.
@@ -223,7 +226,7 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
                     type="button"
                     onClick={() => onRemoveSong(service.id, index)}
                     className="p-1.5 text-zinc-600 hover:text-rose-400 transition cursor-pointer"
-                    title="Quitar de este servicio"
+                    title={`Quitar ${deLa} ${label.singular.toLowerCase()}`}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -240,6 +243,7 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
         onClose={() => setIsPickerOpen(false)}
         songs={songs}
         currentSongIds={service.songIds}
+        targetLabel={`${label.article === 'el' ? 'al' : 'a la'} ${label.singular}`}
         onAddSong={songId => onAddSong(service.id, songId)}
       />
     </div>

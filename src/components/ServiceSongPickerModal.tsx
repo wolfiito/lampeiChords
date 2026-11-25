@@ -9,6 +9,7 @@ interface ServiceSongPickerModalProps {
   songs: Song[]
   currentSongIds: string[]
   onAddSong: (songId: string) => void
+  targetLabel?: string // Ej. 'al Culto' / 'a la Oración'
 }
 
 export const ServiceSongPickerModal: React.FC<ServiceSongPickerModalProps> = ({
@@ -16,7 +17,8 @@ export const ServiceSongPickerModal: React.FC<ServiceSongPickerModalProps> = ({
   onClose,
   songs,
   currentSongIds,
-  onAddSong
+  onAddSong,
+  targetLabel = 'al Culto'
 }) => {
   const { themeConfig } = useTheme()
   const [searchTerm, setSearchTerm] = useState('')
@@ -48,7 +50,7 @@ export const ServiceSongPickerModal: React.FC<ServiceSongPickerModalProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-zinc-800 shrink-0">
           <div>
             <h3 className="text-base sm:text-lg font-black text-white">
-              Agregar Canciones al Servicio
+              Agregar Canciones {targetLabel}
             </h3>
             <p className="text-xs text-zinc-400">
               Toca para agregar a la lista ({currentSongIds.length} ya agregadas)

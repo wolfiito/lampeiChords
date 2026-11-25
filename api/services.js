@@ -25,6 +25,8 @@ async function ensureTable(sql) {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
     `;
+    // Migración: categoría (culto | oracion). Registros previos quedan como 'culto'.
+    await sql`ALTER TABLE chords_services ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'culto'`;
     tableEnsured = true;
   } catch (e) {
     console.error('Error creating chords_services table:', e);
@@ -51,7 +53,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET' || req.method === 'HEAD') {
       const rows = await sql`
-        SELECT id, title, date, location, type, notes, song_ids,
+        SELECT id, title, date, location, type, category, notes, song_ids,
                EXTRACT(EPOCH FROM created_at) * 1000 AS created_at,
                EXTRACT(EPOCH FROM updated_at) * 1000 AS updated_at
         FROM chords_services
@@ -64,6 +66,7 @@ export default async function handler(req, res) {
         date: r.date || '',
         location: r.location || '',
         type: r.type || 'servicio',
+        category: r.category === 'oracion' ? 'oracion' : 'culto',
         notes: r.notes || '',
         songIds: Array.isArray(r.song_ids) ? r.song_ids : [],
         createdAt: Number(r.created_at || Date.now()),
@@ -80,13 +83,14 @@ export default async function handler(req, res) {
       if (Array.isArray(services)) {
         for (const s of services) {
           await sql`
-            INSERT INTO chords_services (id, title, date, location, type, notes, song_ids, updated_at)
+            INSERT INTO chords_services (id, title, date, location, type, category, notes, song_ids, updated_at)
             VALUES (
               ${s.id},
               ${s.title},
               ${s.date || null},
               ${s.location || null},
               ${s.type || 'servicio'},
+              ${s.category === 'oracion' ? 'oracion' : 'culto'},
               ${s.notes || null},
               ${JSON.stringify(s.songIds || [])}::jsonb,
               NOW()
@@ -96,6 +100,7 @@ export default async function handler(req, res) {
               date = EXCLUDED.date,
               location = EXCLUDED.location,
               type = EXCLUDED.type,
+              category = EXCLUDED.category,
               notes = EXCLUDED.notes,
               song_ids = EXCLUDED.song_ids,
               updated_at = NOW();
@@ -106,13 +111,14 @@ export default async function handler(req, res) {
 
       if (service && service.id) {
         await sql`
-          INSERT INTO chords_services (id, title, date, location, type, notes, song_ids, updated_at)
+          INSERT INTO chords_services (id, title, date, location, type, category, notes, song_ids, updated_at)
           VALUES (
             ${service.id},
             ${service.title},
             ${service.date || null},
             ${service.location || null},
             ${service.type || 'servicio'},
+            ${service.category === 'oracion' ? 'oracion' : 'culto'},
             ${service.notes || null},
             ${JSON.stringify(service.songIds || [])}::jsonb,
             NOW()
@@ -122,6 +128,7 @@ export default async function handler(req, res) {
             date = EXCLUDED.date,
             location = EXCLUDED.location,
             type = EXCLUDED.type,
+              category = EXCLUDED.category,
             notes = EXCLUDED.notes,
             song_ids = EXCLUDED.song_ids,
             updated_at = NOW();
